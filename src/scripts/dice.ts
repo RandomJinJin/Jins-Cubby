@@ -215,12 +215,12 @@ export function mountDice(): void {
   const raycaster = new THREE.Raycaster();
   const faceMeshes = views.map((view) => view.mesh);
 
-  function fitDistance(halfWidth: number, halfHeight: number) {
+  function fitDistance(halfWidth: number, halfHeight: number, aspect = camera.aspect) {
     const tan = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
-    return Math.max(halfHeight / tan, halfWidth / (tan * camera.aspect));
+    return Math.max(halfHeight / tan, halfWidth / (tan * aspect));
   }
 
-  const dieDistance = () => fitDistance(DIE_HALF, DIE_HALF);
+  const dieDistance = (aspect = camera.aspect) => fitDistance(DIE_HALF, DIE_HALF, aspect);
 
   const netBox = new THREE.Box3();
   const netCenter = new THREE.Vector3();
@@ -245,10 +245,11 @@ export function mountDice(): void {
   const panTarget = new THREE.Vector2();
   const panCurrent = new THREE.Vector2();
 
-  const netDistance = () =>
+  const netDistance = (aspect = camera.aspect) =>
     fitDistance(
       ((netBox.max.x - netBox.min.x) / 2) * NET_ZOOM,
       ((netBox.max.y - netBox.min.y) / 2) * NET_ZOOM,
+      aspect,
     );
 
   /** 网在视口内的可平移余量（网比视口大时才有） */
@@ -426,16 +427,34 @@ export function mountDice(): void {
 
   const unfoldState = { t: 0 };
 
+  /** 临时按普通网格项排版，测出收起后舞台应回到的矩形 */
+  function stageFlowRect() {
+    const style = root!.style;
+    style.position = 'relative';
+    style.left = 'auto';
+    style.top = 'auto';
+    style.width = 'auto';
+    style.height = 'auto';
+    const rect = root!.getBoundingClientRect();
+    style.position = '';
+    style.left = '';
+    style.top = '';
+    style.width = '';
+    style.height = '';
+    return rect;
+  }
+
   function unfold() {
     if (mode !== 'die') return;
+    const fromHeight = root!.getBoundingClientRect().height;
     mode = 'unfolding';
     syncUI();
-    setHover(null);
-    hideTip();
-    hideResult();
-    // 舞台已经铺满全屏，先同步画布尺寸，再按全屏比例计算相机距离
     measure();
     resize();
+    const viewportW = window.innerWidth;
+    const viewportH = window.innerHeight;
+    // 画布铺满全屏的瞬间按高度比例拉远相机，骰子的画面大小保持连续
+    camera.position.z *= viewportH / fromHeight;
     panTarget.set(0, 0);
     panCurrent.set(0, 0);
 
@@ -445,6 +464,7 @@ export function mountDice(): void {
         mode = 'net';
         syncUI();
         updateCursor();
+        resize();
       },
     });
 
@@ -470,7 +490,7 @@ export function mountDice(): void {
       0.2,
     );
 
-    timeline.to(camera.position, { z: netDistance(), duration: 1.2 }, 0.15);
+    timeline.to(camera.position, { z: netDistance(viewportW / viewportH), duration: 1.2 }, 0.15);
     timeline.to(
       group.position,
       { x: netBase.x, y: netBase.y, z: netBase.z, duration: 0.9 },
@@ -487,8 +507,13 @@ export function mountDice(): void {
 
   function fold() {
     if (mode !== 'net') return;
+    // 收起后画布缩回舞台大小，相机按高度换算，骰子平滑回到原尺寸
+    const targetRect = stageFlowRect();
+    const viewportH = window.innerHeight;
     mode = 'folding';
     syncUI();
+    measure();
+    resize();
     setHover(null);
     hideTip();
     hideResult();
@@ -499,7 +524,9 @@ export function mountDice(): void {
         applyHinges(0);
         mode = 'die';
         syncUI();
+        // 画布缩回舞台的同一帧按新画布高度重算相机距离，骰子画面大小不跳变
         updateCursor();
+        resize();
       },
     });
 
@@ -526,7 +553,15 @@ export function mountDice(): void {
     );
 
     timeline.to(group.position, { x: 0, y: 0, z: 0, duration: 1.1 }, 0);
-    timeline.to(camera.position, { z: dieDistance(), duration: 1.2 }, 0.05);
+    timeline.to(
+      camera.position,
+      {
+        // 全屏画布下保持骰子最终画面尺寸不变所需的相机距离
+        z: dieDistance(targetRect.width / targetRect.height) * (viewportH / targetRect.height),
+        duration: 1.2,
+      },
+      0.05,
+    );
 
     views.forEach((view) => {
       timeline.to(view.mesh.material.color, { r: 1, g: 1, b: 1, duration: 0.45 }, 0);
