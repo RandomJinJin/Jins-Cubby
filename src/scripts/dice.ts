@@ -12,7 +12,7 @@ const IDLE_AXIS = new THREE.Vector3(0.35, 1, 0).normalize();
 /** 骰子在画面里的半尺寸，越大骰子越小 */
 const DIE_HALF = 1.62;
 /** 展开后像地图一样放大，只显示整张网的这一比例，其余靠指针贴边平移查看 */
-const NET_ZOOM = 0.62;
+const NET_ZOOM = 0.52;
 const PAN_DEAD_ZONE = 0.45;
 
 interface FaceView {
@@ -433,6 +433,9 @@ export function mountDice(): void {
     setHover(null);
     hideTip();
     hideResult();
+    // 舞台已经铺满全屏，先同步画布尺寸，再按全屏比例计算相机距离
+    measure();
+    resize();
     panTarget.set(0, 0);
     panCurrent.set(0, 0);
 
