@@ -11,6 +11,9 @@ const X_AXIS = new THREE.Vector3(1, 0, 0);
 const IDLE_AXIS = new THREE.Vector3(0.35, 1, 0).normalize();
 /** 骰子在画面里的半尺寸，越大骰子越小 */
 const DIE_HALF = 1.62;
+/** 展开后像地图一样放大，只显示整张网的这一比例，其余靠指针贴边平移查看 */
+const NET_ZOOM = 0.62;
+const PAN_DEAD_ZONE = 0.45;
 
 interface FaceView {
   data: FaceData;
@@ -56,7 +59,7 @@ function numberTexture(n: number, color: string) {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   const text = String(n);
-  const fontSize = text.length > 1 ? 210 : 290;
+  const fontSize = text.length > 1 ? 105 : 145;
   ctx.font = `500 ${fontSize}px ui-monospace, "SF Mono", Menlo, Consolas, monospace`;
   ctx.fillText(text, size / 2, size / 2 + fontSize * 0.04);
 
@@ -238,11 +241,40 @@ export function mountDice(): void {
     group.updateMatrixWorld(true);
   }
 
+  const netBase = new THREE.Vector3();
+  const panTarget = new THREE.Vector2();
+  const panCurrent = new THREE.Vector2();
+
   const netDistance = () =>
     fitDistance(
-      ((netBox.max.x - netBox.min.x) / 2) * 1.12,
-      ((netBox.max.y - netBox.min.y) / 2) * 1.12,
+      ((netBox.max.x - netBox.min.x) / 2) * NET_ZOOM,
+      ((netBox.max.y - netBox.min.y) / 2) * NET_ZOOM,
     );
+
+  /** 网在视口内的可平移余量（网比视口大时才有） */
+  function panLimits() {
+    const halfW = (netBox.max.x - netBox.min.x) / 2;
+    const halfH = (netBox.max.y - netBox.min.y) / 2;
+    const visibleH = 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * camera.position.z;
+    const visibleW = visibleH * camera.aspect;
+    return {
+      x: Math.max(0, halfW - visibleW * 0.46),
+      y: Math.max(0, halfH - visibleH * 0.46),
+    };
+  }
+
+  /** 指针靠近画面边缘时朝该方向平移，靠近中心时回正 */
+  function updatePanTarget() {
+    if (mode !== 'net' || !hostWidth || !hostHeight) return;
+    const limits = panLimits();
+    const u = (pointerClientX - (stageLeft + hostLeft + hostWidth / 2)) / (hostWidth / 2);
+    const v = (pointerClientY - (stageTop + hostTop + hostHeight / 2)) / (hostHeight / 2);
+    const steer = (n: number) => {
+      const t = THREE.MathUtils.clamp((Math.abs(n) - PAN_DEAD_ZONE) / (1 - PAN_DEAD_ZONE), 0, 1);
+      return Math.sign(n) * t * t;
+    };
+    panTarget.set(-steer(u) * limits.x, steer(v) * limits.y);
+  }
 
   let stageLeft = 0;
   let stageTop = 0;
@@ -378,6 +410,20 @@ export function mountDice(): void {
     result!.classList.remove('is-visible');
   }
 
+  /** 当前朝向相机（+Z）的那一面 */
+  function frontFace() {
+    let front: FaceView | null = null;
+    let best = -Infinity;
+    for (const view of views) {
+      const z = view.data.normal.clone().applyQuaternion(group.quaternion).z;
+      if (z > best) {
+        best = z;
+        front = view;
+      }
+    }
+    return front;
+  }
+
   const unfoldState = { t: 0 };
 
   function unfold() {
@@ -387,6 +433,8 @@ export function mountDice(): void {
     setHover(null);
     hideTip();
     hideResult();
+    panTarget.set(0, 0);
+    panCurrent.set(0, 0);
 
     const timeline = gsap.timeline({
       defaults: { ease: 'power2.inOut' },
@@ -422,7 +470,7 @@ export function mountDice(): void {
     timeline.to(camera.position, { z: netDistance(), duration: 1.2 }, 0.15);
     timeline.to(
       group.position,
-      { x: -netCenter.x, y: -netCenter.y, z: -netCenter.z, duration: 0.9 },
+      { x: netBase.x, y: netBase.y, z: netBase.z, duration: 0.9 },
       0.35,
     );
 
@@ -493,6 +541,11 @@ export function mountDice(): void {
     hideTip();
     hideResult();
 
+    // 复位上一轮可能被标黑的面
+    views.forEach((view) => {
+      view.mesh.material.color.setRGB(1, 1, 1);
+    });
+
     const page = ROLL_PAGES[Math.floor(Math.random() * ROLL_PAGES.length)];
     const startQuaternion = group.quaternion.clone();
     const endQuaternion = new THREE.Quaternion().setFromEuler(
@@ -522,6 +575,11 @@ export function mountDice(): void {
       onComplete: () => {
         mode = 'settled';
         syncUI();
+        // 停下后把朝向相机的面染黑，标出随机落点
+        const front = frontFace();
+        if (front) {
+          gsap.to(front.mesh.material.color, { r: 0, g: 0, b: 0, duration: 0.35, overwrite: true });
+        }
         showResult(page.title);
         gsap.delayedCall(1.1, () => {
           if (mode === 'settled') window.location.assign(page.url);
@@ -592,6 +650,7 @@ export function mountDice(): void {
 
   canvas.addEventListener('pointermove', (event) => {
     updatePointer(event);
+    if (mode === 'net') updatePanTarget();
 
     if (!pointerDown) {
       updateHover();
@@ -640,6 +699,7 @@ export function mountDice(): void {
     if (pointerDown) return;
     setHover(null);
     hideTip();
+    panTarget.set(0, 0);
   });
 
   rollBtn.addEventListener('click', roll);
@@ -653,6 +713,7 @@ export function mountDice(): void {
   window.addEventListener('resize', resize);
 
   measureNet();
+  netBase.set(-netCenter.x, -netCenter.y, -netCenter.z);
   resize();
   camera.position.z = dieDistance();
   syncUI();
@@ -671,7 +732,13 @@ export function mountDice(): void {
       idleQuaternion.setFromAxisAngle(IDLE_AXIS, delta * 0.14);
       group.quaternion.premultiply(idleQuaternion);
     }
-    if (mode === 'net') updateLabels();
+    if (mode === 'net') {
+      // 指针贴边时平滑移动整张网，像地图一样查看屏幕外的部分
+      panCurrent.lerp(panTarget, 1 - Math.exp(-delta * 7));
+      group.position.x = netBase.x + panCurrent.x;
+      group.position.y = netBase.y + panCurrent.y;
+      updateLabels();
+    }
     renderer.render(scene, camera);
     requestAnimationFrame(frame);
   }
