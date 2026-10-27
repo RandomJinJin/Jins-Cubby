@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import gsap from 'gsap';
-import { buildDodecahedron, type FaceData } from '../lib/dodeca';
+import { buildIcosahedron } from '../lib/icosa';
+import type { FaceData } from '../lib/dodeca';
 import { ROLL_PAGES, pageOfFace } from '../config/dice.config';
 
 type Mode = 'die' | 'rolling' | 'settled' | 'unfolding' | 'net' | 'folding';
@@ -22,13 +23,14 @@ interface FaceView {
   baseMatrix: THREE.Matrix4;
 }
 
-function buildPentagonGeometry(face: FaceData) {
+function buildFaceGeometry(face: FaceData) {
   const verts = face.localVertices;
   const radius = Math.max(...verts.map((v) => v.length()));
   const positions: number[] = [];
   const uvs: number[] = [];
 
-  for (let i = 1; i < 4; i++) {
+  // 以第一个顶点为扇心的三角剖分，正三角形与正五边形通用
+  for (let i = 1; i < verts.length - 1; i++) {
     for (const v of [verts[0], verts[i], verts[i + 1]]) {
       positions.push(v.x, v.y, 0);
       uvs.push(v.x / (2 * radius) + 0.5, v.y / (2 * radius) + 0.5);
@@ -100,7 +102,7 @@ export function mountDice(): void {
   fillLight.position.set(-5, -3, -4);
   scene.add(fillLight);
 
-  const model = buildDodecahedron();
+  const model = buildIcosahedron();
   const group = new THREE.Group();
   scene.add(group);
 
@@ -109,7 +111,7 @@ export function mountDice(): void {
   const views: FaceView[] = [];
 
   for (const face of model.faces) {
-    const geometry = buildPentagonGeometry(face);
+    const geometry = buildFaceGeometry(face);
     const material = new THREE.MeshStandardMaterial({
       color: 0xffffff,
       roughness: 0.95,
@@ -161,7 +163,8 @@ export function mountDice(): void {
     .sort((a, b) => a.depth - b.depth)
     .map((item) => item.i);
   const maxDepth = links.reduce((max, link) => Math.max(max, link.depth), 0);
-  const STAGGER = 0.11;
+  // 二十面体层级更深，按最大层级压缩错峰，保证在 1.1s 内全部放平
+  const STAGGER = Math.min(0.11, 0.55 / Math.max(1, maxDepth));
   const SPAN = 1 - STAGGER * maxDepth;
   const scratchRot = new THREE.Matrix4();
   const scratchTrans = new THREE.Matrix4();
@@ -276,7 +279,7 @@ export function mountDice(): void {
     if (hint) {
       hint.textContent =
         mode === 'net'
-          ? '点击已分配的五边形进入 · 点击空白处收起'
+          ? '点击已分配的面进入 · 点击空白处收起'
           : mode === 'rolling'
             ? '投掷中…'
             : mode === 'settled'
