@@ -134,8 +134,9 @@ body::after {
   opacity: 1;
 }
 
+/* 画布始终铺满视口，展开 / 收起时不再切换尺寸，避免重排与缓冲重置造成掉帧 */
 .canvas-host {
-  position: absolute;
+  position: fixed;
   inset: 0;
 }
 
@@ -246,13 +247,7 @@ body::after {
   background: transparent;
 }
 
-/* 展开时画布铺满整个屏幕，页头页脚只作为透明覆盖层，不遮挡模型 */
-.home.is-net .stage {
-  position: fixed;
-  inset: 0;
-  z-index: 1;
-}
-
+/* 展开时页头页脚只作为透明覆盖层，不遮挡模型 */
 .home.is-net .site-foot {
   pointer-events: none;
 }

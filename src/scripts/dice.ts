@@ -220,8 +220,6 @@ export function mountDice(): void {
     return Math.max(halfHeight / tan, halfWidth / (tan * aspect));
   }
 
-  const dieDistance = (aspect = camera.aspect) => fitDistance(DIE_HALF, DIE_HALF, aspect);
-
   const netBox = new THREE.Box3();
   const netCenter = new THREE.Vector3();
 
@@ -279,6 +277,8 @@ export function mountDice(): void {
 
   let stageLeft = 0;
   let stageTop = 0;
+  let stageWidth = 0;
+  let stageHeight = 0;
   let hostLeft = 0;
   let hostTop = 0;
   let hostWidth = 0;
@@ -288,12 +288,18 @@ export function mountDice(): void {
     const stageRect = root!.getBoundingClientRect();
     stageLeft = stageRect.left;
     stageTop = stageRect.top;
+    stageWidth = stageRect.width;
+    stageHeight = stageRect.height;
     const hostRect = host!.getBoundingClientRect();
     hostLeft = hostRect.left - stageRect.left;
     hostTop = hostRect.top - stageRect.top;
     hostWidth = hostRect.width;
     hostHeight = hostRect.height;
   }
+
+  /** 画布始终全屏，骰子仍按舞台的比例取景，画面大小与舞台内的观感一致 */
+  const dieZoom = () =>
+    fitDistance(DIE_HALF, DIE_HALF, stageWidth / stageHeight) * (hostHeight / stageHeight);
 
   function resize() {
     const width = host!.clientWidth;
@@ -304,7 +310,7 @@ export function mountDice(): void {
     camera.updateProjectionMatrix();
     measure();
     if (mode === 'net') camera.position.z = netDistance();
-    else if (mode === 'die' || mode === 'settled') camera.position.z = dieDistance();
+    else if (mode === 'die' || mode === 'settled') camera.position.z = dieZoom();
   }
 
   function syncUI() {
@@ -426,35 +432,17 @@ export function mountDice(): void {
   }
 
   const unfoldState = { t: 0 };
+  const idleSpin = { mix: 1 };
 
-  /** 临时按普通网格项排版，测出收起后舞台应回到的矩形 */
-  function stageFlowRect() {
-    const style = root!.style;
-    style.position = 'relative';
-    style.left = 'auto';
-    style.top = 'auto';
-    style.width = 'auto';
-    style.height = 'auto';
-    const rect = root!.getBoundingClientRect();
-    style.position = '';
-    style.left = '';
-    style.top = '';
-    style.width = '';
-    style.height = '';
-    return rect;
+  /** 空闲自转的加速，收起结束时从静止缓缓转起来，不在结尾突然启动 */
+  function resumeIdleSpin(duration: number) {
+    gsap.to(idleSpin, { mix: 1, duration, ease: 'power2.out', overwrite: true });
   }
 
   function unfold() {
     if (mode !== 'die') return;
-    const fromHeight = root!.getBoundingClientRect().height;
     mode = 'unfolding';
     syncUI();
-    measure();
-    resize();
-    const viewportW = window.innerWidth;
-    const viewportH = window.innerHeight;
-    // 画布铺满全屏的瞬间按高度比例拉远相机，骰子的画面大小保持连续
-    camera.position.z *= viewportH / fromHeight;
     panTarget.set(0, 0);
     panCurrent.set(0, 0);
 
@@ -464,9 +452,11 @@ export function mountDice(): void {
         mode = 'net';
         syncUI();
         updateCursor();
-        resize();
       },
     });
+
+    // 画布本来就铺满视口，相机从舞台取景直接连续推远到整张网，第一帧就起步
+    timeline.to(camera.position, { z: netDistance(), duration: 1.25 }, 0);
 
     const from = group.quaternion.clone();
     const turn = { t: 0 };
@@ -474,10 +464,10 @@ export function mountDice(): void {
       turn,
       {
         t: 1,
-        duration: 0.5,
+        duration: 0.55,
         onUpdate: () => group.quaternion.copy(from).slerp(model.rootQuaternion, turn.t),
       },
-      0,
+      0.05,
     );
 
     timeline.to(
@@ -490,7 +480,6 @@ export function mountDice(): void {
       0.2,
     );
 
-    timeline.to(camera.position, { z: netDistance(viewportW / viewportH), duration: 1.2 }, 0.15);
     timeline.to(
       group.position,
       { x: netBase.x, y: netBase.y, z: netBase.z, duration: 0.9 },
@@ -507,16 +496,13 @@ export function mountDice(): void {
 
   function fold() {
     if (mode !== 'net') return;
-    // 收起后画布缩回舞台大小，相机按高度换算，骰子平滑回到原尺寸
-    const targetRect = stageFlowRect();
-    const viewportH = window.innerHeight;
     mode = 'folding';
     syncUI();
-    measure();
-    resize();
     setHover(null);
     hideTip();
     hideResult();
+    // 折叠期间不自转，结束后由 resumeIdleSpin 从静止缓缓转起来
+    idleSpin.mix = 0;
 
     const timeline = gsap.timeline({
       defaults: { ease: 'power2.inOut' },
@@ -524,11 +510,13 @@ export function mountDice(): void {
         applyHinges(0);
         mode = 'die';
         syncUI();
-        // 画布缩回舞台的同一帧按新画布高度重算相机距离，骰子画面大小不跳变
         updateCursor();
-        resize();
+        resumeIdleSpin(1.2);
       },
     });
+
+    // 相机连续推近回舞台取景，画布尺寸全程不变，结尾没有突变
+    timeline.to(camera.position, { z: dieZoom(), duration: 1.2 }, 0);
 
     const from = group.quaternion.clone();
     const turn = { t: 0 };
@@ -553,15 +541,6 @@ export function mountDice(): void {
     );
 
     timeline.to(group.position, { x: 0, y: 0, z: 0, duration: 1.1 }, 0);
-    timeline.to(
-      camera.position,
-      {
-        // 全屏画布下保持骰子最终画面尺寸不变所需的相机距离
-        z: dieDistance(targetRect.width / targetRect.height) * (viewportH / targetRect.height),
-        duration: 1.2,
-      },
-      0.05,
-    );
 
     views.forEach((view) => {
       timeline.to(view.mesh.material.color, { r: 1, g: 1, b: 1, duration: 0.45 }, 0);
@@ -753,7 +732,6 @@ export function mountDice(): void {
   measureNet();
   netBase.set(-netCenter.x, -netCenter.y, -netCenter.z);
   resize();
-  camera.position.z = dieDistance();
   syncUI();
   updateCursor();
   group.updateMatrixWorld(true);
@@ -767,7 +745,7 @@ export function mountDice(): void {
     clock.last = now;
     // 悬停到某个面时暂停自旋，否则目标面会从指针下转走，无法稳定点击
     if (mode === 'die' && !dragging && !hovered) {
-      idleQuaternion.setFromAxisAngle(IDLE_AXIS, delta * 0.14);
+      idleQuaternion.setFromAxisAngle(IDLE_AXIS, delta * 0.14 * idleSpin.mix);
       group.quaternion.premultiply(idleQuaternion);
     }
     if (mode === 'net') {
