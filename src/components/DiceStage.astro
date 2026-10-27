@@ -1,0 +1,32 @@
+---
+import { DICE_PAGES } from '../config/dice.config';
+---
+
+<section class="stage" data-dice-root aria-label="十二面骰子导航">
+  <div class="canvas-host" data-canvas></div>
+
+  <div aria-hidden="true">
+    {
+      DICE_PAGES.map((page) => (
+        <span class:list={['face-label', 'mono', !page.url && 'is-empty']} data-label={page.face}>
+          {page.title}
+        </span>
+      ))
+    }
+  </div>
+
+  <div class="result" data-result aria-live="polite">
+    <span class="result-k mono">Next</span>
+    <strong class="result-title" data-result-title></strong>
+  </div>
+
+  <div class="face-tip mono" data-tip aria-hidden="true"></div>
+</section>
+
+<script>
+  import { mountDice } from '../scripts/dice';
+
+  const start = () => mountDice();
+  if (document.readyState === 'loading') window.addEventListener('DOMContentLoaded', start);
+  else start();
+</script>
