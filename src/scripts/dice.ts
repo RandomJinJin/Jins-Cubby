@@ -15,6 +15,10 @@ interface FaceView {
   data: FaceData;
   mesh: THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>;
   numberMesh: THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
+  /** 白色面用的深色数字 */
+  darkMap: THREE.Texture;
+  /** 悬停反色后用的浅色数字 */
+  lightMap: THREE.Texture;
   baseMatrix: THREE.Matrix4;
 }
 
@@ -38,7 +42,7 @@ function buildPentagonGeometry(face: FaceData) {
   return geometry;
 }
 
-function numberTexture(n: number) {
+function numberTexture(n: number, color: string) {
   const size = 512;
   const canvas = document.createElement('canvas');
   canvas.width = size;
@@ -46,7 +50,7 @@ function numberTexture(n: number) {
   const ctx = canvas.getContext('2d')!;
 
   ctx.clearRect(0, 0, size, size);
-  ctx.fillStyle = '#1a1a1a';
+  ctx.fillStyle = color;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   const text = String(n);
@@ -70,8 +74,7 @@ export function mountDice(): void {
   const tip = root.querySelector<HTMLElement>('[data-tip]');
   const hint = document.querySelector<HTMLElement>('[data-hint]');
   const rollBtn = document.querySelector<HTMLButtonElement>('[data-roll]');
-  const toggleBtn = document.querySelector<HTMLButtonElement>('[data-toggle]');
-  if (!host || !result || !resultTitle || !rollBtn || !toggleBtn) return;
+  if (!host || !result || !resultTitle || !rollBtn) return;
 
   const labels = new Map<number, HTMLElement>();
   root.querySelectorAll<HTMLElement>('[data-label]').forEach((el) => {
@@ -124,10 +127,12 @@ export function mountDice(): void {
     outline.position.z = 0.0015;
     mesh.add(outline);
 
+    const darkMap = numberTexture(face.number, '#1a1a1a');
+    const lightMap = numberTexture(face.number, '#f5f5f5');
     const numberMesh = new THREE.Mesh(
       geometry,
       new THREE.MeshBasicMaterial({
-        map: numberTexture(face.number),
+        map: darkMap,
         transparent: true,
         depthWrite: false,
       }),
@@ -140,6 +145,8 @@ export function mountDice(): void {
       data: face,
       mesh,
       numberMesh,
+      darkMap,
+      lightMap,
       baseMatrix: new THREE.Matrix4().compose(face.center, face.quaternion, one),
     });
   }
@@ -266,7 +273,6 @@ export function mountDice(): void {
 
   function syncUI() {
     rollBtn!.disabled = mode !== 'die';
-    toggleBtn!.hidden = mode !== 'die';
     if (hint) {
       hint.textContent =
         mode === 'net'
@@ -275,7 +281,7 @@ export function mountDice(): void {
             ? '投掷中…'
             : mode === 'settled'
               ? '即将进入…'
-              : '拖动旋转 · 悬停查看页面 · 点击展开';
+              : '拖动旋转 · 悬停查看页面 · 点击空白处展开';
     }
     root!.classList.toggle('is-net', mode === 'net');
     root!
@@ -298,18 +304,14 @@ export function mountDice(): void {
     if (hovered === view) return;
     if (hovered) {
       gsap.to(hovered.mesh.material.color, { r: 1, g: 1, b: 1, duration: 0.18, overwrite: true });
+      hovered.numberMesh.material.map = hovered.darkMap;
       labels.get(hovered.data.number)?.classList.remove('is-active');
     }
     hovered = view;
     if (hovered) {
-      const shade = mode === 'net' ? 0.102 : 0.878;
-      gsap.to(hovered.mesh.material.color, {
-        r: shade,
-        g: shade,
-        b: shade,
-        duration: 0.18,
-        overwrite: true,
-      });
+      // 反色：面变纯黑（黑色材质不受灯光提亮）、数字变白；展开网里数字已隐藏，只留白色标签
+      gsap.to(hovered.mesh.material.color, { r: 0, g: 0, b: 0, duration: 0.18, overwrite: true });
+      hovered.numberMesh.material.map = mode === 'net' ? hovered.darkMap : hovered.lightMap;
       if (mode === 'net') labels.get(hovered.data.number)?.classList.add('is-active');
     }
     updateCursor();
@@ -568,7 +570,8 @@ export function mountDice(): void {
       window.location.assign(page.url);
       return;
     }
-    unfold();
+    // 只有空白处才展开，避免与点击面进入页面冲突
+    if (!view) unfold();
   }
 
   canvas.addEventListener('pointerdown', (event) => {
@@ -637,9 +640,6 @@ export function mountDice(): void {
   });
 
   rollBtn.addEventListener('click', roll);
-  toggleBtn.addEventListener('click', () => {
-    if (mode === 'die') unfold();
-  });
 
   window.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && mode === 'net') fold();
