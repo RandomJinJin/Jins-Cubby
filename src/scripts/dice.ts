@@ -626,6 +626,49 @@ export function mountDice(): void {
       );
   }
 
+  /** 从浏览器缓存（bfcache）返回时，把页面与骰子恢复到初始状态 */
+  function resetDice() {
+    if (hovered) {
+      labels.get(hovered.data.number)?.classList.remove('is-active');
+      hovered = null;
+    }
+    gsap.killTweensOf([group.position, camera.position, unfoldState, idleSpin]);
+    views.forEach((view) => {
+      gsap.killTweensOf(view.mesh.material.color);
+      gsap.killTweensOf(view.numberMesh.material);
+    });
+
+    pointerDown = false;
+    dragging = false;
+    unfoldState.t = 0;
+    idleSpin.mix = 1;
+    applyHinges(0);
+    group.position.set(0, 0, 0);
+    group.quaternion.copy(initialGroupQuaternion);
+    panTarget.set(0, 0);
+    panCurrent.set(0, 0);
+
+    views.forEach((view) => {
+      view.mesh.material.color.setRGB(1, 1, 1);
+      view.numberMesh.material.map = view.darkMap;
+      view.numberMesh.material.opacity = 1;
+    });
+
+    hideTip();
+    hideResult();
+    mode = 'die';
+    resize();
+    syncUI();
+    updateCursor();
+    group.updateMatrixWorld(true);
+  }
+
+  // 投掷后跳转到目标页，浏览器后退回到本页时页面可能直接从缓存恢复（state 仍是 settled），
+  // 这里在恢复时重置动画与骰子状态
+  window.addEventListener('pageshow', (event) => {
+    if (event.persisted) resetDice();
+  });
+
   function handleTap() {
     raycaster.setFromCamera(pointer, camera);
     const hit = raycaster.intersectObjects(faceMeshes, false)[0];
