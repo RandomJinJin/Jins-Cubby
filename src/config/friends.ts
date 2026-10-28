@@ -28,6 +28,6 @@ export const MY_CARD: MyCard = {
   name: "今斤",
   description: "吾日三省吾身，今日几斤？",
   link: "https://randomjin.top/",
-  avatar: "/logo.png",
-  avatarUrl: "https://randomjin.top/logo.png",
+  avatar: "https://img.randomjin.top/blog/2026/10/20261028-143432-1.webp",
+  avatarUrl: "https://img.randomjin.top/blog/2026/10/20261028-143432-1.webp",
 };
