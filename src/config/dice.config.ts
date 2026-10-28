@@ -13,6 +13,13 @@ export interface RollPage {
 }
 
 /**
+ * 本站页面的地址：开发环境（pnpm dev）用本地相对路径，便于直接查看本地构建的页面；
+ * 正式构建时使用配置的站点域名。
+ */
+const siteUrl = (path: string) =>
+  import.meta.env.DEV ? path : `${import.meta.env.SITE.replace(/\/$/, '')}${path}`;
+
+/**
  * 主页使用的正二十面骰子（20 个正三角形面）的页面映射。
  * 只改这里即可调整每个面进入哪个页面；url 设为 null 即视为未分配。
  * 面编号按正二十面体几何自动生成，相对面数字之和为 21。
@@ -20,9 +27,9 @@ export interface RollPage {
 export const DICE_PAGES: DicePage[] = [
   { face: 1, title: 'BLOG', url: 'https://blog.randomjin.top/posts' },
   { face: 2, title: 'LAB', url: 'https://lab.randomjin.top/' },
-  { face: 3, title: 'ABOUT ME', url: 'https://randomjin.top/about' },
+  { face: 3, title: 'ABOUT ME', url: siteUrl('/about') },
   { face: 4, title: 'DUDU', url: 'https://blog.randomjin.top/dudu' },
-  { face: 5, title: 'FRIENDS', url: 'https://randomjin.top/friends' },
+  { face: 5, title: 'FRIENDS', url: siteUrl('/friends') },
   { face: 6, title: '—', url: null },
   { face: 7, title: '—', url: null },
   { face: 8, title: '—', url: null },
@@ -48,9 +55,9 @@ export const DICE_PAGES: DicePage[] = [
 export const DODECA_PAGES: DicePage[] = [
   { face: 1, title: 'BLOG', url: 'https://blog.randomjin.top/posts' },
   { face: 2, title: 'LAB', url: 'https://lab.randomjin.top/' },
-  { face: 3, title: 'ABOUT ME', url: 'https://randomjin.top/about' },
+  { face: 3, title: 'ABOUT ME', url: siteUrl('/about') },
   { face: 4, title: 'DUDU', url: 'https://blog.randomjin.top/dudu' },
-  { face: 5, title: 'FRIENDS', url: 'https://randomjin.top/friends' },
+  { face: 5, title: 'FRIENDS', url: siteUrl('/friends') },
   { face: 6, title: '—', url: null },
   { face: 7, title: '—', url: null },
   { face: 8, title: '—', url: null },
@@ -67,9 +74,9 @@ export const DODECA_PAGES: DicePage[] = [
 export const ROLL_PAGES: RollPage[] = [
   { title: 'BLOG', url: 'https://blog.randomjin.top/posts' },
   { title: 'LAB', url: 'https://lab.randomjin.top/' },
-  { title: 'ABOUT ME', url: 'https://randomjin.top/about' },
+  { title: 'ABOUT ME', url: siteUrl('/about') },
   { title: 'DUDU', url: 'https://blog.randomjin.top/dudu' },
-  { title: 'FRIENDS', url: 'https://randomjin.top/friends' },
+  { title: 'FRIENDS', url: siteUrl('/friends') },
 ];
 
 export const pageOfFace = (face: number): DicePage | undefined =>
