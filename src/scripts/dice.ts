@@ -262,6 +262,19 @@ export function mountDice(): void {
     };
   }
 
+  /** 跟手拖动：像素位移换算成世界坐标位移，被限制在可平移范围内 */
+  function panByPixels(dx: number, dy: number) {
+    const limits = panLimits();
+    if (!limits.x && !limits.y) return;
+    const worldPerPixel =
+      (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * camera.position.z) /
+      Math.max(1, canvas.clientHeight);
+    panTarget.x = THREE.MathUtils.clamp(panTarget.x + dx * worldPerPixel, -limits.x, limits.x);
+    panTarget.y = THREE.MathUtils.clamp(panTarget.y - dy * worldPerPixel, -limits.y, limits.y);
+    // 拖动时不做缓动，直接跟随手指
+    panCurrent.copy(panTarget);
+  }
+
   /** 指针靠近画面边缘时朝该方向平移，靠近中心时回正 */
   function updatePanTarget() {
     if (mode !== 'net' || !hostWidth || !hostHeight) return;
@@ -311,6 +324,19 @@ export function mountDice(): void {
     measure();
     if (mode === 'net') camera.position.z = netDistance();
     else if (mode === 'die' || mode === 'settled') camera.position.z = dieZoom();
+  }
+
+  const visualViewport = window.visualViewport;
+
+  /** 画布贴合手机可见视口，避免浏览器地址栏收放造成画面相对可视区域偏移 */
+  function syncViewport() {
+    if (!visualViewport) return;
+    host!.style.inset = 'auto';
+    host!.style.left = `${visualViewport.offsetLeft}px`;
+    host!.style.top = `${visualViewport.offsetTop}px`;
+    host!.style.width = `${visualViewport.width}px`;
+    host!.style.height = `${visualViewport.height}px`;
+    resize();
   }
 
   function syncUI() {
@@ -450,6 +476,7 @@ export function mountDice(): void {
       defaults: { ease: 'power2.inOut' },
       onComplete: () => {
         mode = 'net';
+        resize();
         syncUI();
         updateCursor();
       },
@@ -507,8 +534,15 @@ export function mountDice(): void {
     const timeline = gsap.timeline({
       defaults: { ease: 'power2.inOut' },
       onComplete: () => {
+        // 收起后强制归位，避免手机端视口变化导致骰子偏离画面中心
         applyHinges(0);
+        group.position.set(0, 0, 0);
+        group.quaternion.copy(initialGroupQuaternion);
+        panTarget.set(0, 0);
+        panCurrent.set(0, 0);
         mode = 'die';
+        // 按当前视口重新取景，保证骰子尺寸与居中位置都是最新的
+        resize();
         syncUI();
         updateCursor();
         resumeIdleSpin(1.2);
@@ -710,7 +744,22 @@ export function mountDice(): void {
 
   canvas.addEventListener('pointermove', (event) => {
     updatePointer(event);
-    if (mode === 'net') updatePanTarget();
+
+    if (mode === 'net') {
+      if (pointerDown) {
+        const dx = event.clientX - lastX;
+        const dy = event.clientY - lastY;
+        travel += Math.abs(dx) + Math.abs(dy);
+        lastX = event.clientX;
+        lastY = event.clientY;
+        panByPixels(dx, dy);
+      } else if (event.pointerType !== 'touch') {
+        // 鼠标仍保留贴边平移，触屏改为跟手拖动
+        updatePanTarget();
+      }
+      updateHover();
+      return;
+    }
 
     if (!pointerDown) {
       updateHover();
@@ -722,11 +771,6 @@ export function mountDice(): void {
     travel += Math.abs(dx) + Math.abs(dy);
     lastX = event.clientX;
     lastY = event.clientY;
-
-    if (mode === 'net') {
-      updateHover();
-      return;
-    }
 
     if (mode === 'die' && travel > 4) {
       dragging = true;
@@ -759,7 +803,6 @@ export function mountDice(): void {
     if (pointerDown) return;
     setHover(null);
     hideTip();
-    panTarget.set(0, 0);
   });
 
   rollBtn.addEventListener('click', roll);
@@ -771,6 +814,12 @@ export function mountDice(): void {
   const resizeObserver = new ResizeObserver(resize);
   resizeObserver.observe(host);
   window.addEventListener('resize', resize);
+
+  if (visualViewport) {
+    syncViewport();
+    visualViewport.addEventListener('resize', syncViewport);
+    visualViewport.addEventListener('scroll', syncViewport);
+  }
 
   measureNet();
   netBase.set(-netCenter.x, -netCenter.y, -netCenter.z);
