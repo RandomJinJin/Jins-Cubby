@@ -1,21 +1,12 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import DiceStage from '../components/DiceStage.astro';
+import SiteHeader from '../components/SiteHeader.astro';
 ---
 
 <BaseLayout title="今斤 · Index">
   <main class="home">
-    <header class="site-head">
-      <a class="brand" href="https://blog.randomjin.top">
-        <img src="/logo.png" alt="" width="26" height="26" />
-        <span>今斤</span>
-      </a>
-      <div class="head-meta">
-        <span class="mono">Twenty Faces</span>
-        <span class="sep" aria-hidden="true"></span>
-        <a class="mono" href="https://github.com/RandomJinJin" target="_blank" rel="noreferrer">GitHub ↗</a>
-      </div>
-    </header>
+    <SiteHeader meta="Twenty Faces" />
 
     <DiceStage />
 

@@ -20,9 +20,9 @@ export interface RollPage {
 export const DICE_PAGES: DicePage[] = [
   { face: 1, title: 'BLOG', url: 'https://blog.randomjin.top/posts' },
   { face: 2, title: 'LAB', url: 'https://lab.randomjin.top/' },
-  { face: 3, title: 'ABOUT ME', url: 'https://blog.randomjin.top/about' },
+  { face: 3, title: 'ABOUT ME', url: 'https://randomjin.top/about' },
   { face: 4, title: 'DUDU', url: 'https://blog.randomjin.top/dudu' },
-  { face: 5, title: 'FRIENDS', url: 'https://blog.randomjin.top/friends' },
+  { face: 5, title: 'FRIENDS', url: 'https://randomjin.top/friends' },
   { face: 6, title: '—', url: null },
   { face: 7, title: '—', url: null },
   { face: 8, title: '—', url: null },
@@ -48,7 +48,7 @@ export const DICE_PAGES: DicePage[] = [
 export const DODECA_PAGES: DicePage[] = [
   { face: 1, title: 'BLOG', url: 'https://blog.randomjin.top/posts' },
   { face: 2, title: 'LAB', url: 'https://lab.randomjin.top/' },
-  { face: 3, title: 'ABOUT ME', url: 'https://blog.randomjin.top/about' },
+  { face: 3, title: 'ABOUT ME', url: 'https://randomjin.top/about' },
   { face: 4, title: 'DUDU', url: 'https://blog.randomjin.top/dudu' },
   { face: 5, title: 'FRIENDS', url: 'https://randomjin.top/friends' },
   { face: 6, title: '—', url: null },
@@ -67,7 +67,7 @@ export const DODECA_PAGES: DicePage[] = [
 export const ROLL_PAGES: RollPage[] = [
   { title: 'BLOG', url: 'https://blog.randomjin.top/posts' },
   { title: 'LAB', url: 'https://lab.randomjin.top/' },
-  { title: 'ABOUT ME', url: 'https://blog.randomjin.top/about' },
+  { title: 'ABOUT ME', url: 'https://randomjin.top/about' },
   { title: 'DUDU', url: 'https://blog.randomjin.top/dudu' },
   { title: 'FRIENDS', url: 'https://randomjin.top/friends' },
 ];

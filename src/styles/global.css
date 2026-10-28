@@ -107,22 +107,6 @@ body::after {
   gap: clamp(12px, 2vw, 26px);
 }
 
-.head-meta a {
-  color: var(--muted);
-  text-decoration: none;
-  transition: color 0.2s ease;
-}
-
-.head-meta a:hover {
-  color: var(--fg);
-}
-
-.sep {
-  width: 1px;
-  height: 11px;
-  background: var(--border);
-}
-
 .stage {
   position: relative;
   min-height: 0;
@@ -341,8 +325,247 @@ body::after {
 }
 
 @media (max-width: 420px) {
-  .head-meta .sep,
   .head-meta span.mono {
     display: none;
   }
+}
+
+/* ---- 文档页（关于 / 友链） ---- */
+body.is-scrollable {
+  height: auto;
+  min-height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.doc {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(32px, 6vh, 64px);
+  width: 100%;
+  max-width: 720px;
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding: clamp(18px, 3vw, 36px) clamp(18px, 4vw, 56px) 64px;
+}
+
+.doc-main {
+  flex: 1;
+}
+
+.doc-kicker {
+  margin: 0 0 18px;
+}
+
+.doc-title {
+  margin: 0;
+  font-size: clamp(30px, 5vw, 44px);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+}
+
+.doc-lead {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.doc-prose {
+  max-width: 34em;
+  margin-top: 34px;
+  color: #3f3f3f;
+  font-size: 14px;
+  line-height: 2;
+}
+
+.doc-prose p {
+  margin: 0 0 1.15em;
+}
+
+.doc-prose ul {
+  margin: 0 0 1.15em;
+  padding-left: 1.15em;
+}
+
+.doc-prose li {
+  margin-bottom: 0.35em;
+}
+
+.doc-foot {
+  margin-top: 56px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+/* 友链列表 */
+.friend-list {
+  display: grid;
+  gap: 10px;
+  margin: 28px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.friend-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--fg);
+  text-decoration: none;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.friend-card:hover {
+  border-color: var(--fg);
+  transform: translateY(-2px);
+}
+
+.friend-card img {
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--border);
+  background: #fff;
+  object-fit: cover;
+}
+
+.friend-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.friend-name {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.friend-desc {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.friend-arrow {
+  margin-left: auto;
+  color: var(--muted);
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.friend-card:hover .friend-arrow {
+  color: var(--fg);
+  transform: translate(2px, -2px);
+}
+
+/* 「这里是我」信息卡 */
+.me-card {
+  margin-top: 56px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+
+.me-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 18px 0 22px;
+}
+
+.me-head img {
+  width: 52px;
+  height: 52px;
+  border: 1px solid var(--border);
+  background: #fff;
+  object-fit: cover;
+}
+
+.me-name {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.me-desc {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.me-rows {
+  margin: 0;
+}
+
+.me-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+
+.me-row:first-child {
+  border-top: 1px solid var(--border);
+}
+
+.me-row dt {
+  flex: 0 0 84px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.me-row dd {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.me-row a {
+  color: var(--fg);
+  text-decoration: none;
+  border-bottom: 1px solid var(--border);
+}
+
+.me-row a:hover {
+  border-color: var(--fg);
+}
+
+.copy-btn {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.copy-btn:hover {
+  border-color: var(--fg);
+  color: var(--fg);
+}
+
+.copy-btn.is-copied {
+  border-color: var(--fg);
+  background: var(--fg);
+  color: var(--bg);
+}
+
+.copy-btn svg {
+  width: 13px;
+  height: 13px;
 }

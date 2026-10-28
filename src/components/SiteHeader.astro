@@ -1,0 +1,18 @@
+---
+// 全站统一 header：品牌居左，右侧 meta 区（默认留空）
+interface Props {
+  meta?: string;
+}
+
+const { meta } = Astro.props;
+---
+
+<header class="site-head">
+  <a class="brand" href="https://randomjin.top">
+    <img src="/logo.png" alt="" width="26" height="26" />
+    <span>今斤</span>
+  </a>
+  <div class="head-meta">
+    {meta ? <span class="mono">{meta}</span> : null}
+  </div>
+</header>

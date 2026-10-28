@@ -1,0 +1,112 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import SiteHeader from '../components/SiteHeader.astro';
+import { FRIENDS, MY_CARD } from '../config/friends';
+
+const rows = [
+  { label: 'Name', value: MY_CARD.name },
+  { label: 'Link', value: MY_CARD.link, href: MY_CARD.link },
+  { label: 'Description', value: MY_CARD.description },
+  { label: 'Avatar', value: MY_CARD.avatarUrl, href: MY_CARD.avatarUrl },
+];
+
+const COPY_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="1"></rect><path d="M5 15V5a1 1 0 0 1 1-1h10"></path></svg>`;
+const CHECK_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 13 4 4L19 7"></path></svg>`;
+---
+
+<BaseLayout title="友链 · 今斤" description="友情链接：捕捉到的有趣灵魂。" scroll>
+  <div class="doc">
+    <SiteHeader />
+
+    <main class="doc-main">
+      <p class="doc-kicker mono">Links</p>
+      <h1 class="doc-title">友情链接</h1>
+      <p class="doc-lead">捕捉到的有趣灵魂</p>
+
+      <ul class="friend-list">
+        {
+          FRIENDS.map((friend) => (
+            <li>
+              <a
+                class="friend-card"
+                href={friend.link}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <img src={friend.avatar} alt="" width="42" height="42" loading="lazy" />
+                <span class="friend-body">
+                  <span class="friend-name">{friend.name}</span>
+                  <span class="friend-desc">{friend.description}</span>
+                </span>
+                <span class="friend-arrow mono">↗</span>
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+
+      <section class="me-card">
+        <p class="doc-kicker mono">Me</p>
+
+        <div class="me-head">
+          <img src={MY_CARD.avatar} alt="" width="52" height="52" />
+          <div>
+            <h2 class="me-name">{MY_CARD.name}</h2>
+            <p class="me-desc">{MY_CARD.description}</p>
+          </div>
+        </div>
+
+        <dl class="me-rows">
+          {
+            rows.map((row) => (
+              <div class="me-row">
+                <dt>{row.label}</dt>
+                <dd>
+                  {row.href ? (
+                    <a href={row.href} target="_blank" rel="noopener noreferrer">
+                      {row.value}
+                    </a>
+                  ) : (
+                    row.value
+                  )}
+                </dd>
+                <button
+                  type="button"
+                  class="copy-btn"
+                  data-copy={row.value}
+                  aria-label={`复制 ${row.label}`}
+                  set:html={COPY_ICON}
+                />
+              </div>
+            ))
+          }
+        </dl>
+      </section>
+
+      <p class="doc-foot mono">randomjin.top / friends</p>
+    </main>
+  </div>
+</BaseLayout>
+
+<script is:inline define:vars={{ COPY_ICON, CHECK_ICON }}>
+  document.querySelectorAll('.copy-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const value = btn.dataset.copy;
+      if (!value) return;
+
+      try {
+        await navigator.clipboard.writeText(value);
+      } catch {
+        return;
+      }
+
+      btn.classList.add('is-copied');
+      btn.innerHTML = CHECK_ICON;
+
+      window.setTimeout(() => {
+        btn.classList.remove('is-copied');
+        btn.innerHTML = COPY_ICON;
+      }, 1600);
+    });
+  });
+</script>

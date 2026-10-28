@@ -4,9 +4,11 @@ import '../styles/global.css';
 interface Props {
   title: string;
   description?: string;
+  /** 文档页需要纵向滚动；骰子主页保持默认的固定视口 */
+  scroll?: boolean;
 }
 
-const { title, description = '随机之骰：二十个面，通往站内每一个页面。' } = Astro.props;
+const { title, description = '随机之骰：二十个面，通往站内每一个页面。', scroll = false } = Astro.props;
 ---
 
 <!doctype html>
@@ -24,7 +26,7 @@ const { title, description = '随机之骰：二十个面，通往站内每一�
     <meta property="og:url" content="https://randomjin.top" />
     <link rel="icon" type="image/png" href="/logo.png" />
   </head>
-  <body>
+  <body class:list={[scroll && 'is-scrollable']}>
     <slot />
   </body>
 </html>

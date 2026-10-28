@@ -1,0 +1,40 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import SiteHeader from '../components/SiteHeader.astro';
+---
+
+<BaseLayout title="关于我 · 今斤" description="关于今斤：一些关于自己、生活和观察的记录。" scroll>
+  <div class="doc">
+    <SiteHeader />
+
+    <main class="doc-main">
+      <p class="doc-kicker mono">About</p>
+      <h1 class="doc-title">关于我</h1>
+
+      <div class="doc-prose">
+        <p>
+          你好，我是 JIN or 今斤。<br />
+          其实我不知道该怎么介绍自己。
+        </p>
+
+        <p>平时会做的事情：</p>
+        <ul>
+          <li>玩游戏、听音乐</li>
+          <li>观察生活、观察自己，也观察路边那些叫不上名字的鸟</li>
+        </ul>
+
+        <p>
+          偶尔认真思考人生，但更多时候可能只是单纯想摸鱼。<br />
+          喜欢对某个瞬间、某种感受、某个问题多停留一会儿。
+        </p>
+
+        <p>
+          这里是想忠实记录一些当下的感受、想法，以及那些觉得有意思的东西。<br />
+          毕竟有些东西，如果不留下来，过一段时间可能就忘了。
+        </p>
+      </div>
+
+      <p class="doc-foot mono">randomjin.top / about</p>
+    </main>
+  </div>
+</BaseLayout>
