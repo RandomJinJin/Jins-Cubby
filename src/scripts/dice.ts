@@ -3,6 +3,7 @@ import gsap from 'gsap';
 import { buildIcosahedron } from '../lib/icosa';
 import type { FaceData } from '../lib/dodeca';
 import { ROLL_PAGES, pageOfFace } from '../config/dice.config';
+import { DIE_HOVER_EVENT } from '../config/events';
 
 type Mode = 'die' | 'rolling' | 'settled' | 'unfolding' | 'net' | 'folding';
 
@@ -382,6 +383,10 @@ export function mountDice(): void {
       hovered.numberMesh.material.map = mode === 'net' ? hovered.darkMap : hovered.lightMap;
       if (mode === 'net') labels.get(hovered.data.number)?.classList.add('is-active');
     }
+    // 悬停面是纯黑，叠加遮罩会形成突兀的彩色圆斑，通知外部让遮罩退场
+    window.dispatchEvent(
+      new CustomEvent(DIE_HOVER_EVENT, { detail: { active: hovered !== null } }),
+    );
     updateCursor();
   }
 

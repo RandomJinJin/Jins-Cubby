@@ -16,6 +16,9 @@
 
 html {
   -webkit-text-size-adjust: 100%;
+  /* 补上根元素背景，body 的背景才会留在根层叠上下文内，
+     否则会传播到 canvas，canvas 背景不参与混合组，遮罩会失去 backdrop */
+  background: var(--bg);
 }
 
 html,

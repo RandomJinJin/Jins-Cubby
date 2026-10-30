@@ -6,13 +6,20 @@ interface Props {
   description?: string;
   /** 文档页需要纵向滚动；骰子主页保持默认的固定视口 */
   scroll?: boolean;
+  /** 是否启用炫彩鼠标遮罩。仅主页启用 */
+  iridescence?: boolean;
 }
 
-const { title, description = '随机之骰：二十个面，通往站内每一个页面。', scroll = false } = Astro.props;
+const {
+  title,
+  description = '随机之骰：二十个面，通往站内每一个页面。',
+  scroll = false,
+  iridescence = false,
+} = Astro.props;
 ---
 
 <!doctype html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-iridescence={iridescence ? 'on' : undefined}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -29,4 +36,21 @@ const { title, description = '随机之骰：二十个面，通往站内每一�
   <body class:list={[scroll && 'is-scrollable']}>
     <slot />
   </body>
+
+  <script>
+    import { mountIridescence } from '../iridescence';
+    import { DIE_HOVER_EVENT } from '../config/events';
+
+    // 仅在标记了 data-iridescence="on" 的页面挂载（当前仅主页）
+    if (document.documentElement.dataset.iridescence === 'on') {
+      const veil = mountIridescence();
+
+      // 悬停的骰子面是纯黑，遮罩叠加上去会形成突兀的彩色圆斑。
+      // 悬停期间让遮罩退场，恢复纯黑底白字。
+      window.addEventListener(DIE_HOVER_EVENT, (event) => {
+        const detail = (event as CustomEvent<{ active: boolean }>).detail;
+        veil.setSuppressed(detail.active);
+      });
+    }
+  </script>
 </html>
