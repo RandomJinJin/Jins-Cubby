@@ -125,6 +125,12 @@ body::after {
 .canvas-host {
   position: fixed;
   inset: 0;
+  /* 隔离混合组：炫彩遮罩挂在本容器内，只与画布像素混合，
+     页面上的按钮、页头、页脚等元素完全不受影响。
+     背景必须不透明——否则透明区域的 backdrop 为空，
+     遮罩会退化成盖在页面上的实色圆斑。 */
+  isolation: isolate;
+  background: var(--bg);
 }
 
 .canvas-host canvas {

@@ -25,8 +25,28 @@ import { DICE_PAGES } from '../config/dice.config';
 
 <script>
   import { mountDice } from '../scripts/dice';
+  import { mountIridescence } from '../iridescence';
+  import { DIE_HOVER_EVENT } from '../config/events';
 
-  const start = () => mountDice();
+  const start = () => {
+    mountDice();
+
+    // 炫彩遮罩挂在画布容器内：容器是隔离混合组，
+    // 因此遮罩只与骰子画布的像素混合，
+    // 主页上的按钮、页头、页脚等元素完全不受影响。
+    const host = document.querySelector<HTMLElement>('[data-canvas]');
+    if (!host) return;
+
+    const veil = mountIridescence({ container: host });
+
+    // 悬停的骰子面是纯黑，遮罩叠加上去会形成突兀的彩色圆斑。
+    // 悬停期间让遮罩退场，恢复纯黑底白字。
+    window.addEventListener(DIE_HOVER_EVENT, (event) => {
+      const detail = (event as CustomEvent<{ active: boolean }>).detail;
+      veil.setSuppressed(detail.active);
+    });
+  };
+
   if (document.readyState === 'loading') window.addEventListener('DOMContentLoaded', start);
   else start();
 </script>

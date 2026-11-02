@@ -107,8 +107,24 @@ export interface IridescenceConfig {
   respectReducedMotion: boolean;
 }
 
-/** 用户只需提供部分字段，其余走默认值 */
-export type IridescenceOptions = Partial<IridescenceConfig>;
+/**
+ * 挂载选项。
+ *
+ * `container` 决定遮罩挂到哪里，也决定了它的混合范围：
+ * 混合只在**最近的隔离组（isolated group）内**发生，
+ * 因此把遮罩挂进只含目标画布的容器，
+ * 就能让炫彩只作用于该画布内的像素，不影响页面上其他元素。
+ */
+export interface IridescenceOptions extends Partial<IridescenceConfig> {
+  /**
+   * 挂载容器，默认为 document.body。
+   *
+   * 指向某个容器时，遮罩只会与该容器内的内容混合。
+   * 要让效果只作用于一块画布，需同时给该容器加 `isolation: isolate`
+   * 与不透明背景（否则透明区域的 backdrop 为空，遮罩会变成一个实色圆斑）。
+   */
+  container?: HTMLElement | null;
+}
 
 /**
  * 遮罩实例的运行时句柄。

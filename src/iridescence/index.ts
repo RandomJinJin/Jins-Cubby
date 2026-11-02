@@ -19,7 +19,8 @@ const FINE_POINTER = '(hover: hover) and (pointer: fine)';
 const STYLE_ID = 'irid-veil-styles';
 
 function resolveConfig(options?: IridescenceOptions): IridescenceConfig {
-  return { ...DEFAULT_CONFIG, ...options };
+  const { container: _container, ...rest } = options ?? {};
+  return { ...DEFAULT_CONFIG, ...rest };
 }
 
 /** 注入一次静态样式表，已存在则跳过 */
@@ -37,17 +38,27 @@ function injectStyles(): void {
  * 遮罩是一个跟随光标的固定元素，用 mix-blend-mode 混合，
  * 因此只染原本偏暗的像素，浅色区域与模型原有配色保持不变。
  *
+ * ## 作用范围
+ *
+ * `mix-blend-mode` 只在**最近的隔离组**内混合。若遮罩挂在 body 下，
+ * 它混合的是整个视口的 backdrop，页面上所有深色元素都会被染到。
+ *
+ * 把遮罩挂进某个容器（`options.container`），并给该容器
+ * `isolation: isolate` 与不透明背景，即可把混合范围限制为容器内的像素，
+ * 容器外的元素完全不受影响。
+ *
  * 每次调用都会创建独立的实例，配置互不影响；可重复调用。
  *
- * @param options 覆盖默认配置，常用项为 palette / size / shape
- * @returns 卸载函数
+ * @param options 覆盖默认配置，常用项为 palette / size / shape / container
+ * @returns 运行时句柄
  *
  * @example
  * import { mountIridescence } from './iridescence';
- * const unmount = mountIridescence({ palette: ['#f0f', '#08f', '#f00'] });
+ * const veil = mountIridescence({ palette: ['#f0f', '#08f', '#f00'] });
  */
 export function mountIridescence(options?: IridescenceOptions): IridescenceHandle {
   const config = resolveConfig(options);
+  const container = options?.container ?? document.body;
 
   if (config.requireFinePointer && !window.matchMedia(FINE_POINTER).matches) {
     return createNoopHandle();
@@ -71,7 +82,7 @@ export function mountIridescence(options?: IridescenceOptions): IridescenceHandl
   alt.className = 'irid-veil__flow is-alt';
   veil.append(main, alt);
 
-  document.body.appendChild(veil);
+  container.appendChild(veil);
 
   const half = veil.getBoundingClientRect().width / 2 || 38;
 

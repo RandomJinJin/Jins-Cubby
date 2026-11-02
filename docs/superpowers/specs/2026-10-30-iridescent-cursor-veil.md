@@ -124,26 +124,24 @@ export function mountIridescence(options?: IridescenceOptions): () => void {
 }
 ```
 
-### 4. `src/layouts/BaseLayout.astro` —— 接入（仅主页）
+### 4. `src/components/DiceStage.astro` —— 接入（作用域 = 骰子画布）
 
-遮罩只在主页启用，由页面的 `iridescence` 属性决定：
-
-```astro
-<!-- src/pages/index.astro -->
-<BaseLayout title="今斤 · Index" iridescence>
-```
+遮罩挂在画布容器内，**只与骰子像素混合**，主页其他元素完全不受影响：
 
 ```astro
-<!-- src/layouts/BaseLayout.astro -->
-<html lang="zh-CN" data-iridescence={iridescence ? 'on' : undefined}>
-
 <script>
+  import { mountDice } from '../scripts/dice';
   import { mountIridescence } from '../iridescence';
   import { DIE_HOVER_EVENT } from '../config/events';
 
-  // 仅在标记了 data-iridescence="on" 的页面挂载（当前仅主页）
-  if (document.documentElement.dataset.iridescence === 'on') {
-    const veil = mountIridescence();
+  const start = () => {
+    mountDice();
+
+    const host = document.querySelector<HTMLElement>('[data-canvas]');
+    if (!host) return;
+
+    // 容器是隔离混合组 → 遮罩只与骰子画布的像素混合
+    const veil = mountIridescence({ container: host });
 
     // 悬停的骰子面是纯黑，遮罩叠加上去会形成突兀的彩色圆斑。
     // 悬停期间让遮罩退场，恢复纯黑底白字。
@@ -151,20 +149,41 @@ export function mountIridescence(options?: IridescenceOptions): () => void {
       const detail = (event as CustomEvent<{ active: boolean }>).detail;
       veil.setSuppressed(detail.active);
     });
-  }
+  };
+
+  if (document.readyState === 'loading') window.addEventListener('DOMContentLoaded', start);
+  else start();
 </script>
 ```
 
-> `DIE_HOVER_EVENT` 常量放在 `src/config/events.ts` 而非 `scripts/dice.ts` —— 否则 about / friends 页 import 它时会连带加载整个 620KB 的 three.js chunk。剥离后这两个页只加载 4.8KB 的布局脚本。
+> `DIE_HOVER_EVENT` 常量放在 `src/config/events.ts` 而非 `scripts/dice.ts` —— 否则 about / friends 页 import 它时会连带加载整个 620KB 的 three.js chunk。
 
-### 5. 必须的一行准备 — `src/styles/global.css`
+### 5. 必须的两处准备 — `src/styles/global.css`
 
 ```css
+/* a. 根元素背景：body 的背景会传播到 canvas，
+      canvas 背景不参与混合组，遮罩会失去 backdrop */
 html {
-  background: var(--bg);   /* 原有 body 背景会传播到 canvas，
-                               canvas 背景不参与混合组，遮罩会失去 backdrop */
+  background: var(--bg);
+}
+
+/* b. 画布容器成为隔离混合组 —— 这是「只作用于骰子」的关键 */
+.canvas-host {
+  isolation: isolate;   /* 阻断与页面其他元素的混合 */
+  background: var(--bg);  /* 必须不透明，否则透明区域 backdrop 为空，
+                             遮罩会退化成盖在页面上的实色圆斑 */
 }
 ```
+
+### 6. 为什么「隔离组」是唯一正确的做法
+
+`mix-blend-mode` **只在最近的隔离组内混合**。遮罩原本挂在 `body` 下，
+它的 backdrop 是整个视口 —— 于是主页上所有深色元素（黑色按钮、页脚文字、
+tooltip 气泡）全都被染上了炫彩。
+
+把遮罩移进 `.canvas-host` 并给容器 `isolation: isolate` 后，
+混合组内只剩画布像素，组外元素从原理上就不可能被影响。
+展开的骰子地图用的是同一块画布，因此自动保留炫彩效果。
 
 
 ## 为什么骰子也会被覆盖
@@ -248,29 +267,36 @@ html {
 
 | 文件 | 动作 |
 | --- | --- |
-| `src/iridescence/index.ts` | 新增 —— 入口与挂载逻辑，返回 `IridescenceHandle` |
+| `src/iridescence/index.ts` | 新增 —— 入口与挂载逻辑，返回 `IridescenceHandle`；支持 `container` 指定挂载容器 |
 | `src/iridescence/config.ts` | 新增 —— 默认配置（控制面板） |
-| `src/iridescence/types.ts` | 新增 —— 配置项类型 + `IridescenceHandle` |
+| `src/iridescence/types.ts` | 新增 —— 配置项类型 + `IridescenceHandle` + `IridescenceOptions.container` |
 | `src/iridescence/style.ts` | 新增 —— 配置 → CSS 编译器 |
 | `src/iridescence/README.md` | 新增 —— 移植说明 |
 | `src/config/events.ts` | 新增 —— `DIE_HOVER_EVENT` 常量（独立文件，避免牵连 three.js） |
-| `src/layouts/BaseLayout.astro` | 引入模块；按 `iridescence` 属性决定是否挂载 |
-| `src/pages/index.astro` | 传 `iridescence` 开启遮罩（仅主页） |
-| `src/styles/global.css` | 移除遮罩样式（改由模块注入）；`html` 补背景色 |
+| `src/components/DiceStage.astro` | 挂载遮罩到画布容器；接线悬停抑制 |
+| `src/layouts/BaseLayout.astro` | 移除遮罩挂载（改由 DiceStage 承担） |
+| `src/pages/index.astro` | 移除 `iridescence` 属性 |
+| `src/styles/global.css` | 移除遮罩样式（改由模块注入）；`html` 补背景色；`.canvas-host` 加 `isolation: isolate` + 不透明背景 |
 | `src/scripts/dice.ts` | 仅新增一行悬停事件广播，视觉逻辑零改动 |
 
 ## 验收标准
 
-1. ✅ 鼠标停在页面任意位置：光标周围出现圆形炫彩区域，边缘柔和淡出
-2. ✅ 圆形扫过黑色按钮 / 黑色文字：这些像素变成流动的白紫蓝红金属色
-3. ✅ 圆形扫过骰子：黑色描边与深色数字变彩，白色面片颜色完全不变
-4. ✅ 浅灰背景与纯白骰面逐像素零变化
-5. ✅ 圆形离开后：无残留、无痕
-6. ✅ 窗口缩放、页面滚动后遮罩仍跟随光标，尺寸不变
-7. ✅ 改 `config.ts` 的 `palette` / `size` / `shape` 后效果随之改变
-8. ✅ 多实例并存时各自配置互不干扰，仅共用一份样式表
-9. ✅ **仅主页有遮罩**：about / friends 页 `document.querySelectorAll('.irid-veil').length === 0`
-10. ✅ **悬停骰子面时遮罩退场**：悬停面纯黑、白字清晰、零彩色圆斑；移开鼠标后遮罩恢复
-11. ✅ 抑制态对画面零贡献（抑制态截图与 `display:none` 截图 SHA 完全一致）
-12. ✅ about / friends 页不加载 three.js chunk（产物实测 4.8KB vs 620KB）
+1. ✅ 鼠标停在骰子附近：光标周围出现圆形炫彩区域，边缘柔和淡出
+2. ✅ 圆形扫过骰子：黑色描边与深色数字变彩，白色面片颜色完全不变
+3. ✅ 浅灰背景与纯白骰面逐像素零变化
+4. ✅ 圆形离开后：无残留、无痕
+5. ✅ 窗口缩放、页面滚动后遮罩仍跟随光标，尺寸不变
+6. ✅ 改 `config.ts` 的 `palette` / `size` / `shape` 后效果随之改变
+7. ✅ 多实例并存时各自配置互不干扰，仅共用一份样式表
+8. ✅ **仅主页有遮罩**：about / friends 页 `document.querySelectorAll('.irid-veil').length === 0`
+9. ✅ **悬停骰子面时遮罩退场**：悬停面纯黑、白字清晰、零彩色圆斑；移开鼠标后遮罩恢复
+10. ✅ **主页其他元素零影响**：黑色按钮、页头文字、tooltip 气泡的像素级对比 —— 彩色染色像素数 = 0
+11. ✅ **展开的骰子地图保留炫彩**：展开模式下画布内黑块仍被染色，远处描边无染色
+12. ✅ 抑制态对画面零贡献（抑制态与 `display:none` 截图的**彩色**像素差异 = 0）
+13. ✅ about / friends 页不加载 three.js chunk（产物实测 4.8KB vs 620KB）
+
+> **测量方法**：仅比较截图哈希不够 —— 骰子自转会造成抗锯齿抖动，产生大量灰阶差异像素。
+> 必须进一步区分「彩色差异」（染色，R/G/B 通道变化不一致）与「灰阶差异」（抖动）。
+> 判定标准：彩色像素数 = 0 才算真正无影响。
+
 

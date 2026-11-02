@@ -44,6 +44,29 @@ veil.suppressed;          // 读取当前抑制状态
 veil.destroy();           // 卸载并清理所有监听
 ```
 
+### 让遮罩只作用于某个区域
+
+`mix-blend-mode` **只在最近的隔离组（isolated group）内混合**。
+若遮罩挂在 `body` 下，它混合的是整个视口的 backdrop —— 页面上所有深色元素
+（按钮、深色文字、图标）都会被染到。
+
+把遮罩挂进一个容器，并给该容器 `isolation: isolate` 与不透明背景，
+就能把混合范围限制为容器内的像素：
+
+```ts
+const host = document.querySelector('#my-canvas-host');
+mountIridescence({ container: host });
+```
+
+```css
+#my-canvas-host {
+  isolation: isolate;   /* 建立隔离组，阻断与外部的混合 */
+  background: #f5f5f5;  /* 必须不透明，否则透明区域 backdrop 为空，遮罩会变成实色圆斑 */
+}
+```
+
+容器外的元素完全不受影响。
+
 ### 让遮罩在某个区域主动让位
 
 典型场景：页面上有个交互元素本身是深色的，遮罩叠上去会形成一个突兀的圆斑。
