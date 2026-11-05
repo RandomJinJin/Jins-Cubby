@@ -25,7 +25,7 @@ const siteUrl = (path: string) =>
  * 面编号按正二十面体几何自动生成，相对面数字之和为 21。
  */
 export const DICE_PAGES: DicePage[] = [
-  { face: 1, title: 'BLOG', url: 'https://blog.randomjin.top/posts' },
+  { face: 1, title: 'BLOG', url: 'https://blog.randomjin.top/' },
   { face: 2, title: 'LAB', url: 'https://lab.randomjin.top/' },
   { face: 3, title: 'ABOUT ME', url: siteUrl('/about') },
   { face: 4, title: 'DUDU', url: 'https://blog.randomjin.top/dudu' },
@@ -53,7 +53,7 @@ export const DICE_PAGES: DicePage[] = [
  * 并把下面这份数组接到 pageOfFace 上。
  */
 export const DODECA_PAGES: DicePage[] = [
-  { face: 1, title: 'BLOG', url: 'https://blog.randomjin.top/posts' },
+  { face: 1, title: 'BLOG', url: 'https://blog.randomjin.top/' },
   { face: 2, title: 'LAB', url: 'https://lab.randomjin.top/' },
   { face: 3, title: 'ABOUT ME', url: siteUrl('/about') },
   { face: 4, title: 'DUDU', url: 'https://blog.randomjin.top/dudu' },
@@ -68,16 +68,18 @@ export const DODECA_PAGES: DicePage[] = [
 ];
 
 /**
- * 「随机投掷」的候选页面，与骰子的面无关：整站页面多于面数时，
- * 直接把新条目加到这里即可参与随机。
+ * 「随机投掷」的候选页面，与骰子的面无关。
+ * 页面池由 scripts/generate-roll-pool.mjs 在构建前自动生成（src/config/rollPool.json）：
+ * 汇聚主站全部页面、blog 的 sitemap 页面（含每篇文章）与 lab 的内容页，
+ * 因此可以随机投掷到页面层级，无需手动维护列表。
  */
-export const ROLL_PAGES: RollPage[] = [
-  { title: 'BLOG', url: 'https://blog.randomjin.top/posts' },
-  { title: 'LAB', url: 'https://lab.randomjin.top/' },
-  { title: 'ABOUT ME', url: siteUrl('/about') },
-  { title: 'DUDU', url: 'https://blog.randomjin.top/dudu' },
-  { title: 'FRIENDS', url: siteUrl('/friends') },
-];
+import rollPool from './rollPool.json';
+
+export const ROLL_PAGES: RollPage[] = rollPool.map((entry) => ({
+  title: entry.title,
+  // 主站页面在池中存的是路径：dev 用本地路由，构建后拼站点域名
+  url: 'path' in entry && entry.path ? siteUrl(entry.path) : entry.url,
+}));
 
 export const pageOfFace = (face: number): DicePage | undefined =>
   DICE_PAGES.find((page) => page.face === face);

@@ -1,8 +1,6 @@
+@import './tokens.css';
+
 :root {
-  --bg: #f5f5f5;
-  --fg: #1a1a1a;
-  --muted: #6b6b6b;
-  --border: #c6c6c6;
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans SC",
     Arial, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
@@ -352,7 +350,7 @@ body.is-scrollable {
   flex-direction: column;
   gap: clamp(32px, 6vh, 64px);
   width: 100%;
-  max-width: 720px;
+  max-width: 860px;
   min-height: 100dvh;
   margin: 0 auto;
   padding: clamp(18px, 3vw, 36px) clamp(18px, 4vw, 56px) 64px;
@@ -381,10 +379,10 @@ body.is-scrollable {
 }
 
 .doc-prose {
-  max-width: 34em;
+  max-width: 36em;
   margin-top: 34px;
   color: #3f3f3f;
-  font-size: 14px;
+  font-size: 16px;
   line-height: 2;
 }
 
@@ -399,6 +397,17 @@ body.is-scrollable {
 
 .doc-prose li {
   margin-bottom: 0.35em;
+}
+
+.doc-prose a {
+  color: var(--fg);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-decoration-color: var(--border);
+}
+
+.doc-prose a:hover {
+  text-decoration-color: var(--fg);
 }
 
 .doc-foot {

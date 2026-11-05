@@ -1,0 +1,106 @@
+[
+  {
+    "title": "/404",
+    "path": "/404"
+  },
+  {
+    "title": "ABOUT ME",
+    "path": "/about"
+  },
+  {
+    "title": "FRIENDS",
+    "path": "/friends"
+  },
+  {
+    "title": "HOME",
+    "path": "/"
+  },
+  {
+    "title": "BLOG",
+    "url": "https://blog.randomjin.top/"
+  },
+  {
+    "title": "BLOG · categories",
+    "url": "https://blog.randomjin.top/categories"
+  },
+  {
+    "title": "BLOG · categories/cat",
+    "url": "https://blog.randomjin.top/categories/cat"
+  },
+  {
+    "title": "BLOG · categories/food",
+    "url": "https://blog.randomjin.top/categories/food"
+  },
+  {
+    "title": "BLOG · categories/officestory",
+    "url": "https://blog.randomjin.top/categories/officestory"
+  },
+  {
+    "title": "BLOG · categories/trip",
+    "url": "https://blog.randomjin.top/categories/trip"
+  },
+  {
+    "title": "BLOG · dudu",
+    "url": "https://blog.randomjin.top/dudu"
+  },
+  {
+    "title": "BLOG · posts",
+    "url": "https://blog.randomjin.top/posts"
+  },
+  {
+    "title": "BLOG · posts/2026-07-14",
+    "url": "https://blog.randomjin.top/posts/2026-07-14"
+  },
+  {
+    "title": "BLOG · posts/2026-10-15",
+    "url": "https://blog.randomjin.top/posts/2026-10-15"
+  },
+  {
+    "title": "BLOG · posts/2026-11-04",
+    "url": "https://blog.randomjin.top/posts/2026-11-04"
+  },
+  {
+    "title": "BLOG · tags",
+    "url": "https://blog.randomjin.top/tags"
+  },
+  {
+    "title": "BLOG · tags/cat",
+    "url": "https://blog.randomjin.top/tags/cat"
+  },
+  {
+    "title": "BLOG · tags/fiction",
+    "url": "https://blog.randomjin.top/tags/fiction"
+  },
+  {
+    "title": "BLOG · tags/food",
+    "url": "https://blog.randomjin.top/tags/food"
+  },
+  {
+    "title": "BLOG · tags/life",
+    "url": "https://blog.randomjin.top/tags/life"
+  },
+  {
+    "title": "BLOG · tags/trip",
+    "url": "https://blog.randomjin.top/tags/trip"
+  },
+  {
+    "title": "LAB",
+    "url": "https://lab.randomjin.top/"
+  },
+  {
+    "title": "LAB · wayfinding",
+    "url": "https://lab.randomjin.top/wayfinding"
+  },
+  {
+    "title": "LAB · gacha",
+    "url": "https://lab.randomjin.top/gacha"
+  },
+  {
+    "title": "LAB · dodgebutton",
+    "url": "https://lab.randomjin.top/dodgebutton"
+  },
+  {
+    "title": "LAB · chatbubble",
+    "url": "https://lab.randomjin.top/chatbubble"
+  }
+]

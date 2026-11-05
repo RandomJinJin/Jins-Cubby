@@ -1,0 +1,15 @@
+/* 由 Cubby 根目录 sync-tokens.mjs 自动生成（单一数据源：theme.config.json），勿手改。
+   改配色：编辑根目录 theme.config.json 后运行 node sync-tokens.mjs。站点：Jins-Cubby (randomjin.top) */
+:root {
+  --bg: #f5f5f5;
+  --fg: #1a1a1a;
+  --muted-fg: #6b6b6b;
+  --muted-bg: #eeeeee;
+  --border: #c6c6c6;
+  --card: #ffffff;
+  --on-primary: #ffffff;
+}
+
+:root {
+  --muted: var(--muted-fg);
+}
