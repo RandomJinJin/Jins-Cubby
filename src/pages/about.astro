@@ -5,7 +5,7 @@ import SiteHeader from '../components/SiteHeader.astro';
 
 <BaseLayout title="关于我 · 今斤" description="关于今斤：一些关于自己、生活和观察的记录。" scroll>
   <div class="doc">
-    <SiteHeader />
+    <SiteHeader crumbs={[{ label: '关于我' }]} />
 
     <main class="doc-main">
       <p class="doc-kicker mono">About</p>

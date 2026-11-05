@@ -1,18 +1,55 @@
 ---
-// 全站统一 header：品牌居左，右侧 meta 区（默认留空）
-interface Props {
-  meta?: string;
+// 三站统一的顶部 header：home 按钮 + 面包屑（主站侧实现）
+interface Crumb {
+  label: string;
+  /** 缺省表示当前页，不可点击 */
+  href?: string;
 }
 
-const { meta } = Astro.props;
+interface Props {
+  crumbs?: Crumb[];
+}
+
+const { crumbs = [] } = Astro.props;
+const lastIndex = crumbs.length - 1;
 ---
 
-<header class="site-head">
-  <a class="brand" href="https://randomjin.top">
-    <img src="https://img.randomjin.top/logo/logo.png" alt="" width="26" height="26" />
+<header class="site-header">
+  <a class="brand" href="https://randomjin.top" title="回到主站 randomjin.top">
+    <img
+      src="https://img.randomjin.top/logo/logo.png"
+      alt=""
+      width="26"
+      height="26"
+    />
     <span>今斤</span>
   </a>
-  <div class="head-meta">
-    {meta ? <span class="mono">{meta}</span> : null}
-  </div>
+
+  {
+    crumbs.length > 0 && (
+      <nav class="site-header-crumbs" aria-label="面包屑">
+        <ol>
+          {crumbs.map((crumb, index) => (
+            <li>
+              {crumb.href && index !== lastIndex ? (
+                <a href={crumb.href}>{crumb.label}</a>
+              ) : (
+                <span
+                  class="is-current"
+                  aria-current={index === lastIndex ? 'page' : undefined}
+                >
+                  {crumb.label}
+                </span>
+              )}
+              {index < lastIndex && (
+                <span class="sep" aria-hidden="true">
+                  /
+                </span>
+              )}
+            </li>
+          ))}
+        </ol>
+      </nav>
+    )
+  }
 </header>

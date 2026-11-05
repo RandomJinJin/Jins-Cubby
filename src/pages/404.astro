@@ -5,7 +5,7 @@ import SiteHeader from '../components/SiteHeader.astro';
 
 <BaseLayout title="404 · 今斤" description="页面不存在。" scroll>
   <div class="doc">
-    <SiteHeader />
+    <SiteHeader crumbs={[{ label: '404' }]} />
 
     <main class="doc-main">
       <p class="doc-kicker mono">Not Found</p>
