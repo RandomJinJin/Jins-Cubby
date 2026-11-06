@@ -1,5 +1,7 @@
 ---
-// 三站统一的顶部 header：home 按钮 + 面包屑（主站侧实现）
+// 由 Cubby 根目录 sync-header.mjs 自动生成（单一源：shared/SiteHeader.astro），勿手改。
+// 改 header：编辑 shared/SiteHeader.astro 后运行 node sync-header.mjs。
+// 三站统一顶部 header：home 按钮 + 面包屑；向下阅读收起、向上回看展开，内容重叠时转毛玻璃。
 interface Crumb {
   label: string;
   /** 缺省表示当前页，不可点击 */
@@ -14,15 +16,20 @@ const { crumbs = [] } = Astro.props;
 const lastIndex = crumbs.length - 1;
 ---
 
-<header class="site-header">
-  <a class="brand" href="https://randomjin.top" title="回到主站 randomjin.top">
+<header class="site-header" data-header data-pagefind-ignore>
+  <a
+    class="site-header-brand"
+    href="https://randomjin.top"
+    title="回到主站 randomjin.top"
+    aria-label="回到主站 randomjin.top"
+  >
     <img
       src="https://img.randomjin.top/logo/logo.png"
       alt=""
       width="26"
       height="26"
     />
-    <span>今斤</span>
+    <span class="site-header-brand-text">今斤</span>
   </a>
 
   {
@@ -36,7 +43,7 @@ const lastIndex = crumbs.length - 1;
               ) : (
                 <span
                   class="is-current"
-                  aria-current={index === lastIndex ? 'page' : undefined}
+                  aria-current={index === lastIndex ? "page" : undefined}
                 >
                   {crumb.label}
                 </span>
@@ -53,3 +60,256 @@ const lastIndex = crumbs.length - 1;
     )
   }
 </header>
+
+<script>
+  const getHeader = () => document.querySelector("[data-header]");
+
+  /** 回到这里就必定展开 */
+  const TOP_RESET = 8;
+  /** 向下累计位移阈值 */
+  const COLLAPSE_AT = 10;
+  /** 向上累计位移阈值 */
+  const EXPAND_AT = 10;
+  /** 超过这个位置视为内容已进入 header 区域，展开时转毛玻璃 */
+  const GLASS_AT = 8;
+
+  let scrollCollapsed = false;
+  let peeking = false;
+  let lastY = Math.max(0, window.scrollY);
+  let acc = 0;
+  let boundHeader = null;
+
+  const apply = () => {
+    const header = getHeader();
+    if (!header) return;
+    const y = Math.max(0, window.scrollY);
+    const collapsed = scrollCollapsed && !peeking;
+    header.classList.toggle("is-collapsed", collapsed);
+    header.classList.toggle("is-glass", !collapsed && y > GLASS_AT);
+    // 展开期间让整条 header 可命中，否则指针从 brand 移向面包屑时会穿过空隙被判定为离开，
+    // 面包屑会立刻重新淡出，导致无法 hover 到具体条目。
+    header.classList.toggle("is-peek", peeking);
+  };
+
+  const onScroll = () => {
+    const y = Math.max(0, window.scrollY);
+    const dy = y - lastY;
+    lastY = y;
+
+    if (dy > 0) acc = acc < 0 ? dy : acc + dy;
+    else if (dy < 0) acc = acc > 0 ? dy : acc + dy;
+
+    if (y <= TOP_RESET) {
+      scrollCollapsed = false;
+      acc = 0;
+    } else if (acc >= COLLAPSE_AT) {
+      scrollCollapsed = true;
+      acc = 0;
+    } else if (acc <= -EXPAND_AT) {
+      scrollCollapsed = false;
+      acc = 0;
+    }
+
+    apply();
+  };
+
+  const onLeave = (event) => {
+    const header = getHeader();
+    const next = event.relatedTarget;
+    if (!header || !next || !header.contains(next)) {
+      peeking = false;
+      apply();
+    }
+  };
+
+  /**
+   * Blog 开启了 ClientRouter，页面切换时 header 会被替换成新节点，
+   * 而模块脚本只执行一次。所以每次 astro:page-load 都要重新绑定当前节点。
+   */
+  const bindHeader = () => {
+    const header = getHeader();
+    if (!header || header === boundHeader) return;
+    boundHeader = header;
+
+    scrollCollapsed = false;
+    peeking = false;
+    acc = 0;
+    lastY = Math.max(0, window.scrollY);
+
+    // header 本身 pointer-events: none，:hover / pointerenter 不会命中父级，
+    // 所以在 brand 与面包屑上分别监听，用 relatedTarget 判断指针是否还在 header 内。
+    const brand = header.querySelector(".site-header-brand");
+    const crumbs = header.querySelector(".site-header-crumbs");
+    const peek = () => {
+      peeking = true;
+      apply();
+    };
+
+    for (const node of [brand, crumbs]) {
+      node?.addEventListener("pointerenter", peek);
+      node?.addEventListener("pointerleave", onLeave);
+    }
+
+    header.addEventListener("focusin", peek);
+    header.addEventListener("focusout", onLeave);
+
+    apply();
+  };
+
+  window.addEventListener("scroll", onScroll, { passive: true });
+  document.addEventListener("astro:page-load", bindHeader);
+  bindHeader();
+</script>
+
+<style is:global>
+  :root {
+    --site-header-height: 56px;
+  }
+
+  .site-header {
+    position: fixed;
+    top: 0;
+    right: 0;
+    left: 0;
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    gap: clamp(12px, 2vw, 26px);
+    padding: 14px clamp(18px, 4vw, 56px);
+    background-color: var(--bg);
+    /* 顶部区域让点击穿透到下层，仅 brand 与面包屑可点 */
+    pointer-events: none;
+    transition: background-color 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .site-header.is-glass {
+    background-color: color-mix(in srgb, var(--bg) 72%, transparent);
+    -webkit-backdrop-filter: blur(12px) saturate(140%);
+    backdrop-filter: blur(12px) saturate(140%);
+  }
+
+  .site-header.is-collapsed {
+    background-color: transparent;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  /* 展开（hover / 聚焦）期间整条 header 可命中，指针在 brand 与面包屑之间移动不算离开 */
+  .site-header.is-peek {
+    pointer-events: auto;
+  }
+
+  .site-header-brand,
+  .site-header-crumbs {
+    pointer-events: auto;
+  }
+
+  .site-header-brand {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 10px;
+    color: var(--muted-fg);
+    font-size: 13px;
+    letter-spacing: 0.04em;
+    text-decoration: none;
+    transition: color 0.2s ease;
+  }
+
+  .site-header-brand:hover {
+    color: var(--fg);
+  }
+
+  .site-header-brand-text {
+    display: inline-block;
+    max-width: 5em;
+    overflow: hidden;
+    white-space: nowrap;
+    transition: opacity 0.28s ease;
+  }
+
+  /* 收起后只留不透明的 logo 方块，避免文字压在正文上；文字原地淡出，不做位移动画 */
+  .site-header.is-collapsed .site-header-brand-text {
+    opacity: 0;
+  }
+
+  .site-header-brand img {
+    display: block;
+    width: 26px;
+    height: 26px;
+    object-fit: cover;
+    border: 1px solid var(--border);
+    background: #fff;
+  }
+
+  .site-header-crumbs {
+    flex: 1;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+    transition: opacity 0.28s ease;
+  }
+
+  .site-header-crumbs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .site-header.is-collapsed .site-header-crumbs {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .site-header-crumbs ol {
+    display: flex;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    font-size: 13px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .site-header-crumbs li {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+  }
+
+  .site-header-crumbs a {
+    color: color-mix(in srgb, var(--muted-fg) 70%, transparent);
+    text-decoration: none;
+    transition: color 0.2s ease;
+  }
+
+  .site-header-crumbs a:hover {
+    color: var(--fg);
+  }
+
+  .site-header-crumbs .is-current {
+    max-width: 40ch;
+    overflow: hidden;
+    color: var(--fg);
+    text-overflow: ellipsis;
+  }
+
+  .site-header-crumbs .sep {
+    margin: 0 8px;
+    color: color-mix(in srgb, var(--muted-fg) 30%, transparent);
+  }
+
+  @media (max-width: 420px) {
+    .site-header-crumbs .is-current {
+      max-width: 24ch;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .site-header,
+    .site-header-crumbs {
+      transition: none;
+    }
+  }
+</style>

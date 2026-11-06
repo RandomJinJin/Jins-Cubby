@@ -4,7 +4,6 @@
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans SC",
     Arial, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-  --site-header-height: 56px;
 }
 
 *,
@@ -60,104 +59,6 @@ body::after {
   gap: clamp(10px, 2.4vh, 26px);
   padding: clamp(18px, 3vw, 36px) clamp(18px, 4vw, 56px);
   padding-bottom: max(clamp(18px, 3vw, 36px), env(safe-area-inset-bottom));
-}
-
-.site-header {
-  position: fixed;
-  top: 0;
-  right: 0;
-  left: 0;
-  z-index: 60;
-  display: flex;
-  align-items: center;
-  gap: clamp(12px, 2vw, 26px);
-  padding: 14px clamp(18px, 4vw, 56px);
-  background: color-mix(in srgb, var(--bg) 72%, transparent);
-  border-bottom: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
-  -webkit-backdrop-filter: blur(12px) saturate(140%);
-  backdrop-filter: blur(12px) saturate(140%);
-  /* 顶部区域让点击穿透到画布，仅链接与面包屑可点 */
-  pointer-events: none;
-}
-
-.site-header a,
-.site-header-crumbs {
-  pointer-events: auto;
-}
-
-.brand {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--muted);
-  font-size: 13px;
-  letter-spacing: 0.04em;
-  text-decoration: none;
-  transition: color 0.2s ease;
-}
-
-.brand:hover {
-  color: var(--fg);
-}
-
-.brand img {
-  display: block;
-  width: 26px;
-  height: 26px;
-  object-fit: cover;
-  border: 1px solid var(--border);
-  background: #fff;
-}
-
-.site-header-crumbs {
-  flex: 1;
-  min-width: 0;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.site-header-crumbs::-webkit-scrollbar {
-  display: none;
-}
-
-.site-header-crumbs ol {
-  display: flex;
-  align-items: center;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  white-space: nowrap;
-}
-
-.site-header-crumbs li {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-}
-
-.site-header-crumbs a {
-  color: color-mix(in srgb, var(--muted) 70%, transparent);
-  text-decoration: none;
-  transition: color 0.2s ease;
-}
-
-.site-header-crumbs a:hover {
-  color: var(--fg);
-}
-
-.site-header-crumbs .is-current {
-  max-width: 40ch;
-  overflow: hidden;
-  color: var(--fg);
-  text-overflow: ellipsis;
-}
-
-.site-header-crumbs .sep {
-  margin: 0 8px;
-  color: color-mix(in srgb, var(--muted) 30%, transparent);
 }
 
 .stage {
@@ -380,12 +281,6 @@ body::after {
     flex: 1;
     padding: 14px 12px;
     font-size: 10px;
-  }
-}
-
-@media (max-width: 420px) {
-  .site-header-crumbs .is-current {
-    max-width: 24ch;
   }
 }
 
