@@ -14,9 +14,11 @@ interface Props {
 
 const { crumbs = [] } = Astro.props;
 const lastIndex = crumbs.length - 1;
+/** 无面包屑 = 主站首页，只保留 home 按钮，不渲染 header 条 */
+const isBare = crumbs.length === 0;
 ---
 
-<header class="site-header" data-header data-pagefind-ignore>
+<header class={isBare ? "site-header is-bare" : "site-header"} data-header data-pagefind-ignore>
   <a
     class="site-header-brand"
     href="https://randomjin.top"
@@ -82,6 +84,8 @@ const lastIndex = crumbs.length - 1;
   const apply = () => {
     const header = getHeader();
     if (!header) return;
+    // 主站首页只有 home 按钮，不参与任何显隐状态
+    if (header.classList.contains("is-bare")) return;
     const y = Math.max(0, window.scrollY);
     const collapsed = scrollCollapsed && !peeking;
     header.classList.toggle("is-collapsed", collapsed);
@@ -95,6 +99,9 @@ const lastIndex = crumbs.length - 1;
     const y = Math.max(0, window.scrollY);
     const dy = y - lastY;
     lastY = y;
+
+    // 一旦滚动，hover 展开态立即失效：nav 的显隐只由滚动方向决定
+    if (dy !== 0) peeking = false;
 
     if (dy > 0) acc = acc < 0 ? dy : acc + dy;
     else if (dy < 0) acc = acc > 0 ? dy : acc + dy;
@@ -130,6 +137,12 @@ const lastIndex = crumbs.length - 1;
     const header = getHeader();
     if (!header || header === boundHeader) return;
     boundHeader = header;
+
+    // 主站首页：只保留 home 按钮，不绑定滚动/悬停逻辑
+    if (header.classList.contains("is-bare")) {
+      peeking = false;
+      return;
+    }
 
     scrollCollapsed = false;
     peeking = false;
@@ -189,6 +202,13 @@ const lastIndex = crumbs.length - 1;
   }
 
   .site-header.is-collapsed {
+    background-color: transparent;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  /* 主站首页：不渲染 header 条，只留 home 按钮 */
+  .site-header.is-bare {
     background-color: transparent;
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
