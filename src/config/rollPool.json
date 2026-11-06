@@ -16,6 +16,10 @@
     "path": "/"
   },
   {
+    "title": "TIMELINE",
+    "path": "/timeline"
+  },
+  {
     "title": "BLOG",
     "url": "https://blog.randomjin.top/"
   },

@@ -1,0 +1,151 @@
+---
+/**
+ * 黑胶唱片本体：基底圆盘 + 纹路层 + 反光层 + 年份年轮交互层。
+ *
+ * 几何统一在 viewBox 1000×1000（圆心 500,500，半径 500）里绘制，
+ * 页面按 --rec-d 缩放，因此所有尺寸都是「唱片单位」。
+ */
+
+interface Props {
+  /** 年份（升序），用于绘制可交互年轮 */
+  years: number[];
+  /** 与 years 一一对应的年轮半径 */
+  radii: number[];
+}
+
+const { years, radii } = Astro.props;
+
+/** 确定性伪随机：保证每次构建的纹路完全一致 */
+let seed = 20261106;
+const rnd = () => ((seed = (seed * 1664525 + 1013904223) % 4294967296) / 4294967296);
+const rand = (min: number, max: number) => min + rnd() * (max - min);
+
+const pt = (r: number, deg: number) => {
+  const a = (deg * Math.PI) / 180;
+  return [500 + r * Math.cos(a), 500 + r * Math.sin(a)] as const;
+};
+
+/** 生成一条顺时针圆弧（角度按屏幕坐标，y 向下，0° 在右侧） */
+const arcPath = (r: number, a1: number, a2: number) => {
+  const [x1, y1] = pt(r, a1);
+  const [x2, y2] = pt(r, a2);
+  return `M${x1.toFixed(1)} ${y1.toFixed(1)}A${r} ${r} 0 0 1 ${x2.toFixed(1)} ${y2.toFixed(1)}`;
+};
+
+/** 31 条银灰细环 */
+const grooves = Array.from({ length: 31 }, (_, i) => ({
+  r: +(191 + (i * (496 - 191)) / 30 + rand(-1.5, 1.5)).toFixed(1),
+  w: +rand(0.6, 1.4).toFixed(2),
+  o: +rand(0.05, 0.12).toFixed(3),
+}));
+
+/** 7 条更宽的暗环，让层次不至于太平 */
+const darkRings = Array.from({ length: 7 }, () => ({
+  r: +rand(205, 492).toFixed(1),
+  w: +rand(3, 8).toFixed(1),
+  o: +rand(0.18, 0.34).toFixed(2),
+}));
+
+/** 26 条随机长度弧段：不可交互，只为了让唱片旋转时能被看出来 */
+const decorArcs: { d: string; w: number; o: number }[] = [];
+let guard = 0;
+while (decorArcs.length < 26 && guard < 400) {
+  guard += 1;
+  const r = +rand(198, 490).toFixed(1);
+  // 避开年份年轮 ±8，免得抢走可交互线条的辨识度
+  if (radii.some((rr) => Math.abs(rr - r) < 8)) continue;
+  // 避开右上 1-3 点钟的反光区（270°~360°）
+  const a1 = rand(6, 236);
+  const a2 = Math.min(266, a1 + rand(6, 36));
+  decorArcs.push({
+    d: arcPath(r, a1, a2),
+    w: +rand(0.6, 2).toFixed(2),
+    o: +rand(0.05, 0.13).toFixed(3),
+  });
+}
+
+/** 右上角弧形高光（银白细线） */
+const highlights = [
+  { r: 486, a1: -64, a2: -6, w: 2.2, o: 0.5, c: '#dedcd7' },
+  { r: 478, a1: -70, a2: -10, w: 1.4, o: 0.42, c: '#e6e4df' },
+  { r: 462, a1: -58, a2: -9, w: 2.8, o: 0.3, c: '#d8d6d1' },
+  { r: 448, a1: -76, a2: -14, w: 1.8, o: 0.36, c: '#eae8e3' },
+  { r: 430, a1: -62, a2: -4, w: 3.4, o: 0.24, c: '#cfcdc8' },
+  { r: 412, a1: -72, a2: -18, w: 1.2, o: 0.4, c: '#e2e0db' },
+  { r: 392, a1: -54, a2: -8, w: 2.6, o: 0.26, c: '#d5d3ce' },
+  { r: 360, a1: -68, a2: -12, w: 1.6, o: 0.34, c: '#dedcd7' },
+  { r: 322, a1: -60, a2: -6, w: 2.4, o: 0.22, c: '#cbc9c4' },
+  { r: 286, a1: -74, a2: -16, w: 1.1, o: 0.3, c: '#e7e5e0' },
+  { r: 232, a1: -56, a2: -10, w: 2, o: 0.18, c: '#d2d0cb' },
+].map((h) => ({ ...h, d: arcPath(h.r, h.a1, h.a2) }));
+
+/** 反光区里的暗带，压出「一整束」而不是散点 */
+const shades = [
+  { r: 480, a1: -78, a2: -4, w: 7, o: 0.5 },
+  { r: 444, a1: -70, a2: -8, w: 9, o: 0.42 },
+  { r: 404, a1: -64, a2: -12, w: 6, o: 0.38 },
+  { r: 350, a1: -76, a2: -20, w: 10, o: 0.34 },
+  { r: 300, a1: -58, a2: -6, w: 8, o: 0.3 },
+].map((s) => ({ ...s, d: arcPath(s.r, s.a1, s.a2) }));
+
+const rings = years.map((year, i) => ({ year, r: radii[i] }));
+---
+
+<!-- 圆盘本体：渐变 + 内阴影 + 底部浅投影 -->
+<div class="tl-plate" aria-hidden="true"></div>
+
+<svg class="tl-grooves" data-grooves viewBox="0 0 1000 1000" aria-hidden="true" focusable="false">
+  <!-- 旋转层：纹路 / 装饰弧 / 年轮 -->
+  <g class="tl-disc" data-disc>
+    {
+      grooves.map((g) => (
+        <circle cx="500" cy="500" r={g.r} fill="none" stroke="#e9e7e2" stroke-opacity={g.o} stroke-width={g.w} />
+      ))
+    }
+    {
+      darkRings.map((g) => (
+        <circle cx="500" cy="500" r={g.r} fill="none" stroke="#000000" stroke-opacity={g.o} stroke-width={g.w} />
+      ))
+    }
+    {
+      decorArcs.map((a) => (
+        <path d={a.d} fill="none" stroke="#e7e5e0" stroke-opacity={a.o} stroke-width={a.w} />
+      ))
+    }
+    {
+      rings.map((ring) => (
+        <circle class="tl-ring" data-ring={ring.year} cx="500" cy="500" r={ring.r} fill="none" />
+      ))
+    }
+    <circle cx="500" cy="500" r="188" fill="none" stroke="#ffffff" stroke-opacity="0.08" stroke-width="1" />
+  </g>
+
+  <!-- 静止反光层：光源固定在右上，不随唱片旋转 -->
+  <g class="tl-sheen" aria-hidden="true">
+    {shades.map((s) => <path d={s.d} fill="none" stroke="#000000" stroke-opacity={s.o} stroke-width={s.w} />)}
+    {
+      highlights.map((h) => (
+        <path d={h.d} fill="none" stroke={h.c} stroke-opacity={h.o} stroke-width={h.w} stroke-linecap="round" />
+      ))
+    }
+  </g>
+
+  <!-- 年轮命中层：透明宽环，只在 stroke 上接收指针 -->
+  <g class="tl-hits">
+    {
+      rings.map((ring) => (
+        <circle
+          class="tl-ring-hit"
+          data-ring={ring.year}
+          cx="500"
+          cy="500"
+          r={ring.r}
+          fill="none"
+          role="button"
+          tabindex="0"
+          aria-label={`${ring.year} 年`}
+        />
+      ))
+    }
+  </g>
+</svg>

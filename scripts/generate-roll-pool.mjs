@@ -34,6 +34,7 @@ const LOCAL_TITLES = {
   '/': 'HOME',
   '/about': 'ABOUT ME',
   '/friends': 'FRIENDS',
+  '/timeline': 'TIMELINE',
 };
 
 const isPageUrl = (u) => !/\.(xml|png|jpe?g|gif|webp|svg|ico|css|js|mjs|txt|woff2?|ttf|pdf|zip)$/i.test(u);

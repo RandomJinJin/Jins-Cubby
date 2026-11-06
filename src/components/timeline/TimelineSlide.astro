@@ -1,0 +1,32 @@
+---
+import type { TimelineItem } from '../../config/timeline';
+
+interface Props {
+  item: TimelineItem;
+  year: number;
+  /** 该年在全年条目中的序号，从 1 开始 */
+  position: number;
+  /** 该年条目总数 */
+  total: number;
+  /** 对应年份的唱针角度（用于脚本读取） */
+  angle: number;
+  active?: boolean;
+}
+
+const { item, year, position, total, angle, active = false } = Astro.props;
+const pad = (n: number) => String(n).padStart(2, '0');
+---
+
+<article
+  class:list={['tl-slide', active && 'is-active']}
+  data-slide
+  data-year={year}
+  data-angle={angle}
+  aria-hidden={!active}
+>
+  <p class="tl-date mono">{item.date}</p>
+  <h2 class="tl-title">{item.title}</h2>
+  <p class="tl-desc">{item.description}</p>
+  {item.image && <img class="tl-shot" src={item.image.src} alt={item.image.alt} loading="lazy" />}
+  <p class="tl-count mono">{pad(position)} / {pad(total)}</p>
+</article>

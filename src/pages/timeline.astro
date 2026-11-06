@@ -1,0 +1,627 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import VinylRecord from '../components/timeline/VinylRecord.astro';
+import Tonearm from '../components/timeline/Tonearm.astro';
+import TimelineSlide from '../components/timeline/TimelineSlide.astro';
+import { TIMELINE } from '../config/timeline';
+
+const years = TIMELINE.map((y) => y.year);
+
+/** 年轮由内向外：最内圈 315、最外圈 482（= 针尖 0° 的落点半径） */
+const R_INNER = 315;
+const R_OUTER = 482;
+const radii = years.map((_, i) =>
+  years.length > 1 ? R_INNER + ((R_OUTER - R_INNER) * i) / (years.length - 1) : R_OUTER,
+);
+
+/** 唱针几何：转轴 (974,156)，0° 时针尖 (982,482) */
+const PIVOT = { x: 974, y: 156 };
+const TIP = { x: 982, y: 482 };
+const ARM = Math.hypot(TIP.x - PIVOT.x, TIP.y - PIVOT.y);
+const PIVOT_D = Math.hypot(PIVOT.x - 500, PIVOT.y - 500);
+/** 0° 时针尖到圆心的实际距离（≈482.34），让旋转反解与绘制几何完全自洽 */
+const TIP_R = Math.hypot(TIP.x - 500, TIP.y - 500);
+const clampUnit = (v: number) => Math.min(1, Math.max(-1, v));
+const pivotAngleFor = (r: number) =>
+  Math.acos(clampUnit((PIVOT_D ** 2 + ARM ** 2 - r ** 2) / (2 * PIVOT_D * ARM)));
+const BASE_ANGLE = pivotAngleFor(TIP_R);
+/**
+ * 返回 SVG 顺时针旋转角（正值 = 顺时针）。
+ * 唱针从转轴向右下方伸出，顺时针旋转会把它扫向圆心，
+ * 因此针尖半径恰好等于目标年轮半径，页面比例怎么变都落在同一条线上。
+ */
+const angleForRadius = (r: number) => +(((BASE_ANGLE - pivotAngleFor(r)) * 180) / Math.PI).toFixed(2);
+
+const slides = TIMELINE.flatMap((entry, yi) =>
+  entry.items.map((item, ii) => ({
+    item,
+    year: entry.year,
+    position: ii + 1,
+    total: entry.items.length,
+    angle: angleForRadius(radii[yi]),
+  })),
+);
+
+/** 默认停在最新年份的最后一则 */
+const initialIndex = slides.length - 1;
+const initialYear = slides[initialIndex].year;
+---
+
+<BaseLayout title="时间线 · 今斤" description="用一张黑胶唱片，记录这个站点走过的每一年。">
+  <main class="tl-stage" data-timeline>
+    <div class="tl-record">
+      <VinylRecord years={years} radii={radii} />
+      <a
+        class="tl-label"
+        href="https://randomjin.top"
+        title="返回主站 randomjin.top"
+        aria-label="返回主站 randomjin.top"
+      >
+        <img src="https://img.randomjin.top/logo/logo.png" alt="" width="640" height="640" />
+      </a>
+      <span class="tl-label-tip" aria-hidden="true">点击返回主页</span>
+      <Tonearm />
+    </div>
+
+    <section class="tl-panel" aria-label="站点时间线">
+      <div class="tl-year-wrap">
+        <h1 class="tl-year" data-year>{initialYear}</h1>
+      </div>
+
+      <div class="tl-slides" data-slides aria-live="polite">
+        {
+          slides.map((slide, i) => (
+            <TimelineSlide
+              item={slide.item}
+              year={slide.year}
+              position={slide.position}
+              total={slide.total}
+              angle={slide.angle}
+              active={i === initialIndex}
+            />
+          ))
+        }
+      </div>
+    </section>
+
+    <div class="tl-tip" data-tip aria-hidden="true"></div>
+  </main>
+</BaseLayout>
+
+<style is:global>
+  .tl-stage {
+    --rec-d: 113vh;
+    --rec-x: 13vw;
+    --rec-y: 61vh;
+    position: relative;
+    width: 100%;
+    height: 100dvh;
+    overflow: hidden;
+    background: var(--bg);
+    touch-action: none;
+  }
+
+  /* ---------- 唱片 ---------- */
+  .tl-record {
+    position: absolute;
+    left: calc(var(--rec-x) - var(--rec-d) / 2);
+    top: calc(var(--rec-y) - var(--rec-d) / 2);
+    width: var(--rec-d);
+    aspect-ratio: 1 / 1;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .tl-plate {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: radial-gradient(circle at 64% 30%, #1e1e21 0%, #151518 32%, #0d0d0f 66%, #09090a 100%);
+    box-shadow:
+      inset 0 0 90px 10px rgba(0, 0, 0, 0.55),
+      22px 34px 54px -12px rgba(0, 0, 0, 0.28),
+      8px 12px 26px rgba(0, 0, 0, 0.1);
+  }
+
+  .tl-grooves {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+
+  .tl-grooves .tl-disc {
+    will-change: transform;
+  }
+
+  /* 可交互年轮 */
+  .tl-grooves .tl-ring {
+    stroke: #ffffff;
+    stroke-opacity: 0.42;
+    stroke-width: 2;
+    transition: stroke-opacity 0.25s ease, stroke-width 0.25s ease;
+  }
+
+  .tl-grooves .tl-ring.is-hover,
+  .tl-grooves .tl-ring.is-active {
+    stroke-opacity: 0.95;
+    stroke-width: 2.6;
+  }
+
+  .tl-grooves .tl-ring-hit {
+    stroke: #ffffff;
+    stroke-opacity: 0;
+    stroke-width: 34;
+    pointer-events: stroke;
+    cursor: pointer;
+  }
+
+  .tl-grooves .tl-ring-hit:focus {
+    outline: none;
+  }
+
+  .tl-grooves .tl-ring-hit:focus-visible {
+    stroke-opacity: 0.16;
+  }
+
+  /* 中心 label：logo 满铺，同时作为返回主页的入口 */
+  .tl-label {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    display: block;
+    width: 36%;
+    aspect-ratio: 1 / 1;
+    transform: translate(-50%, -50%);
+    overflow: hidden;
+    border-radius: 50%;
+    background: var(--bg);
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.12);
+    pointer-events: auto;
+    cursor: pointer;
+    transition: box-shadow 0.25s ease, transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .tl-label:hover,
+  .tl-label:focus-visible {
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2), 0 10px 28px rgba(0, 0, 0, 0.16);
+    transform: translate(-50%, -50%) scale(1.02);
+  }
+
+  .tl-label:focus-visible {
+    outline: none;
+  }
+
+  .tl-label img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .tl-label-tip {
+    position: absolute;
+    left: 50%;
+    top: 71%;
+    transform: translate(-50%, 0);
+    padding: 6px 10px;
+    background: var(--fg);
+    color: var(--bg);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+  }
+
+  .tl-label:hover + .tl-label-tip,
+  .tl-label:focus-visible + .tl-label-tip {
+    opacity: 1;
+  }
+
+  /* 唱针：与唱片共用坐标系，叠在最上层 */
+  .tl-tonearm {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    pointer-events: none;
+    filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.35));
+  }
+
+  /* ---------- 右侧内容 ---------- */
+  .tl-panel {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: max(49vw, calc(var(--rec-x) + var(--rec-d) / 2 + 2vw));
+    right: 4vw;
+    pointer-events: none;
+  }
+
+  .tl-year-wrap {
+    position: absolute;
+    left: 0;
+    top: calc(var(--rec-y) - var(--rec-d) / 2 + var(--rec-d) * 0.156);
+    transform: translateY(-50%);
+  }
+
+  .tl-year {
+    margin: 0;
+    color: transparent;
+    font-family: var(--font-sans);
+    font-size: clamp(56px, 7vw, 118px);
+    font-weight: 650;
+    line-height: 0.92;
+    letter-spacing: 0.01em;
+    font-variant-numeric: tabular-nums;
+    -webkit-text-stroke: 2.2px #141414;
+    user-select: none;
+  }
+
+  .tl-slides {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 47%;
+    bottom: 0;
+    pointer-events: none;
+  }
+
+  .tl-slide {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .tl-slide.is-active {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .tl-date {
+    margin: 0 0 14px;
+    color: var(--muted-fg);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+  }
+
+  .tl-title {
+    margin: 0;
+    color: var(--fg);
+    font-size: clamp(22px, 2.4vw, 34px);
+    font-weight: 600;
+    line-height: 1.25;
+    letter-spacing: -0.02em;
+  }
+
+  .tl-desc {
+    max-width: 30em;
+    margin: 14px 0 0;
+    color: #3f3f3f;
+    font-size: clamp(13px, 1.05vw, 15px);
+    line-height: 2;
+  }
+
+  .tl-shot {
+    width: min(240px, 100%);
+    max-height: 30vh;
+    margin-top: 22px;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    filter: grayscale(1);
+  }
+
+  .tl-count {
+    margin: 24px 0 0;
+    color: var(--muted-fg);
+    font-size: 10px;
+    letter-spacing: 0.22em;
+  }
+
+  /* 年份 tooltip：跟随鼠标 */
+  .tl-tip {
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 40;
+    padding: 5px 9px;
+    background: var(--fg);
+    color: var(--bg);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-50%);
+    transition: opacity 0.14s ease;
+  }
+
+  .tl-tip.is-visible {
+    opacity: 1;
+  }
+
+  /* ---------- 窄屏 ---------- */
+  @media (max-width: 820px) {
+    .tl-stage {
+      --rec-d: 96vw;
+      --rec-x: 50vw;
+      --rec-y: 30dvh;
+    }
+
+    .tl-panel {
+      left: 7vw;
+      right: 7vw;
+    }
+
+    .tl-year-wrap {
+      top: calc(var(--rec-y) + var(--rec-d) / 2 + 2vh);
+    }
+
+    .tl-year {
+      font-size: clamp(44px, 12vw, 76px);
+      -webkit-text-stroke-width: 1.6px;
+    }
+
+    .tl-slides {
+      top: calc(var(--rec-y) + var(--rec-d) / 2 + 8vh);
+    }
+
+    .tl-shot {
+      width: min(150px, 100%);
+      margin-top: 16px;
+    }
+
+    .tl-count {
+      margin-top: 16px;
+    }
+  }
+
+  @media (max-height: 660px) {
+    .tl-shot {
+      display: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tl-grooves .tl-ring,
+    .tl-tip {
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  import gsap from 'gsap';
+
+  const root = document.querySelector('[data-timeline]');
+
+  if (root) {
+    const slides = Array.from(root.querySelectorAll('[data-slide]'));
+    const yearEl = root.querySelector('[data-year]');
+    const tip = root.querySelector('[data-tip]');
+    const svg = root.querySelector('[data-grooves]');
+    const disc = root.querySelector('[data-disc]');
+    const arm = root.querySelector('[data-arm]');
+    const rings = Array.from(root.querySelectorAll('[data-ring]'));
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (slides.length) {
+      let index = slides.length - 1;
+      let spin = 0;
+
+      const setRingHighlight = (year) => {
+        for (const el of rings) {
+          el.classList.toggle('is-active', el.getAttribute('data-ring') === year);
+        }
+      };
+
+      /** 跨年：更新年份、唱针角度、年轮高亮 */
+      const syncYear = (year, angle) => {
+        if (yearEl && yearEl.textContent !== year) {
+          yearEl.textContent = year;
+          if (!reduced) {
+            gsap.fromTo(
+              yearEl,
+              { opacity: 0, y: 10 },
+              { opacity: 1, y: 0, duration: 0.42, ease: 'power2.out', overwrite: true },
+            );
+          }
+        }
+
+        setRingHighlight(year);
+
+        if (arm) {
+          // 正值 = 顺时针，唱针由外圈向圆心扫动；角度由年轮半径反解，缩放不影响落点
+          gsap.to(arm, {
+            rotation: angle,
+            svgOrigin: '974 156',
+            duration: reduced ? 0 : 0.75,
+            ease: 'power2.inOut',
+            overwrite: true,
+          });
+        }
+      };
+
+      const go = (next) => {
+        const target = Math.max(0, Math.min(slides.length - 1, next));
+        if (target === index) return;
+
+        const prev = slides[index];
+        const nextSlide = slides[target];
+        const prevYear = prev.getAttribute('data-year');
+        const delta = target - index;
+        index = target;
+
+        nextSlide.classList.add('is-active');
+        nextSlide.setAttribute('aria-hidden', 'false');
+        prev.classList.remove('is-active');
+        prev.setAttribute('aria-hidden', 'true');
+
+        if (reduced) {
+          gsap.set(prev, { opacity: 0, y: 0 });
+          gsap.set(nextSlide, { opacity: 1, y: 0 });
+        } else {
+          gsap.to(prev, { opacity: 0, y: -6, duration: 0.2, ease: 'power1.out', overwrite: true });
+          gsap.fromTo(
+            nextSlide,
+            { opacity: 0, y: 10 },
+            { opacity: 1, y: 0, duration: 0.38, ease: 'power2.out', overwrite: true },
+          );
+        }
+
+        // 每切换一条，唱片缓慢逆时针旋转一格（回看时顺时针回转）
+        if (disc) {
+          spin += delta * 12;
+          gsap.to(disc, {
+            rotation: spin,
+            svgOrigin: '500 500',
+            duration: reduced ? 0 : 0.8,
+            ease: 'power1.out',
+            overwrite: true,
+          });
+        }
+
+        const year = nextSlide.getAttribute('data-year');
+        if (year && year !== prevYear) {
+          syncYear(year, Number(nextSlide.getAttribute('data-angle') ?? 0));
+        }
+      };
+
+      const jumpToYear = (year) => {
+        const i = slides.findIndex((s) => s.getAttribute('data-year') === year);
+        if (i >= 0) go(i);
+      };
+
+      /* ---- 初始状态：停在最新年份的最后一则 ---- */
+      const start = slides[slides.length - 1];
+      gsap.set(arm, { rotation: Number(start.getAttribute('data-angle') ?? 0), svgOrigin: '974 156' });
+      gsap.set(disc, { rotation: 0, svgOrigin: '500 500' });
+      setRingHighlight(start.getAttribute('data-year') ?? '');
+
+      /* ---- 滚轮：每次一条，520ms 节流 ---- */
+      let acc = 0;
+      let lastNav = 0;
+
+      root.addEventListener(
+        'wheel',
+        (e) => {
+          e.preventDefault();
+          const now = performance.now();
+          if (now - lastNav < 520) return;
+
+          acc += e.deltaY;
+          if (Math.abs(acc) < 26) return;
+
+          // 默认停在最新一则，向下滚 = 向过去回看
+          const dir = acc > 0 ? -1 : 1;
+          acc = 0;
+          lastNav = now;
+          go(index + dir);
+        },
+        { passive: false },
+      );
+
+      /* ---- 触屏上下滑动 ---- */
+      let touchY = null;
+
+      root.addEventListener(
+        'touchstart',
+        (e) => {
+          touchY = e.touches.length === 1 ? e.touches[0].clientY : null;
+        },
+        { passive: true },
+      );
+
+      root.addEventListener(
+        'touchend',
+        (e) => {
+          if (touchY === null) return;
+          const end = e.changedTouches[0]?.clientY ?? touchY;
+          const dy = end - touchY;
+          touchY = null;
+          if (Math.abs(dy) < 46) return;
+          // 向上滑动 = 向下浏览 = 回看更早的条目
+          go(index + (dy < 0 ? -1 : 1));
+        },
+        { passive: true },
+      );
+
+      /* ---- 键盘 ---- */
+      window.addEventListener('keydown', (e) => {
+        if (e.metaKey || e.ctrlKey || e.altKey) return;
+        if (e.key === 'ArrowDown' || e.key === 'PageDown') {
+          e.preventDefault();
+          go(index - 1);
+        } else if (e.key === 'ArrowUp' || e.key === 'PageUp') {
+          e.preventDefault();
+          go(index + 1);
+        } else if (e.key === 'Home') {
+          e.preventDefault();
+          go(0);
+        } else if (e.key === 'End') {
+          e.preventDefault();
+          go(slides.length - 1);
+        }
+      });
+
+      /* ---- 年轮 hover tooltip + 点击跳转 ---- */
+      const hideTip = () => {
+        tip?.classList.remove('is-visible');
+        for (const el of rings) el.classList.remove('is-hover');
+      };
+
+      svg?.addEventListener('pointermove', (e) => {
+        const target = e.target;
+        if (!(target instanceof Element)) return;
+        const ring = target.closest('[data-ring]');
+        if (!ring || !tip) {
+          hideTip();
+          return;
+        }
+
+        const year = ring.getAttribute('data-ring') ?? '';
+        tip.textContent = year;
+        tip.style.left = `${e.clientX + 14}px`;
+        tip.style.top = `${e.clientY}px`;
+        tip.classList.add('is-visible');
+
+        for (const el of rings) {
+          el.classList.toggle('is-hover', el.getAttribute('data-ring') === year);
+        }
+      });
+
+      svg?.addEventListener('pointerleave', hideTip);
+
+      svg?.addEventListener('click', (e) => {
+        const target = e.target;
+        if (!(target instanceof Element)) return;
+        const ring = target.closest('[data-ring]');
+        if (ring) jumpToYear(ring.getAttribute('data-ring') ?? '');
+      });
+
+      svg?.addEventListener('keydown', (e) => {
+        const target = e.target;
+        if (!(target instanceof Element)) return;
+        const ring = target.closest('[data-ring]');
+        if (!ring) return;
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          jumpToYear(ring.getAttribute('data-ring') ?? '');
+        }
+      });
+    }
+  }
+</script>
