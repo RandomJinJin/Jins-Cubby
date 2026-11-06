@@ -86,7 +86,6 @@ const initialYear = slides[initialIndex].year;
 
     <div class="tl-tip" data-tip aria-hidden="true"></div>
   </main>
-</BaseLayout>
 
 <style is:global>
   .tl-stage {
@@ -95,10 +94,16 @@ const initialYear = slides[initialIndex].year;
     --rec-y: 61vh;
     position: relative;
     width: 100%;
+    height: 100vh;
     height: 100dvh;
     overflow: hidden;
     background: var(--bg);
     touch-action: none;
+  }
+
+  /* 指针落在年轮上时给出可点击的提示 */
+  .tl-stage.is-on-ring {
+    cursor: pointer;
   }
 
   /* ---------- 唱片 ---------- */
@@ -358,6 +363,7 @@ const initialYear = slides[initialIndex].year;
     .tl-stage {
       --rec-d: 96vw;
       --rec-x: 50vw;
+      --rec-y: 30vh;
       --rec-y: 30dvh;
     }
 
@@ -515,14 +521,20 @@ const initialYear = slides[initialIndex].year;
       let acc = 0;
       let lastNav = 0;
 
-      root.addEventListener(
+      /**
+       * 监听 window 而不是舞台本身：指针落在哪个元素上（卡片、唱针、甚至 body）
+       * 滚轮都会冒泡到这里，不会因为命中目标不同而漏掉。
+       */
+      window.addEventListener(
         'wheel',
         (e) => {
           e.preventDefault();
           const now = performance.now();
           if (now - lastNav < 520) return;
 
-          acc += e.deltaY;
+          // deltaMode 1 = 按行、2 = 按页，统一折算成像素，避免部分鼠标/触控板推不动阈值
+          const delta = e.deltaY * (e.deltaMode === 1 ? 40 : e.deltaMode === 2 ? 800 : 1);
+          acc += delta;
           if (Math.abs(acc) < 26) return;
 
           // 默认停在最新一则，向下滚 = 向过去回看
@@ -578,37 +590,67 @@ const initialYear = slides[initialIndex].year;
       });
 
       /* ---- 年轮 hover tooltip + 点击跳转 ---- */
+      /**
+       * 用「指针到唱片圆心的距离」反推落在哪条年轮，
+       * 不依赖 SVG 的命中测试：SVG 根节点是 pointer-events: none，
+       * 部分浏览器会因此吞掉子元素的命中，导致 hover / click 完全没反应。
+       */
+      const record = root.querySelector('.tl-record');
+      const ringRadii = rings.map((el) => Number(el.getAttribute('r') ?? 0));
+      const HOVER_TOL = 18;
+      const CLICK_TOL = 30;
+
+      /** 返回指针落在的年轮元素；单位与唱片 viewBox 一致，缩放不影响判定 */
+      const ringUnder = (clientX, clientY, tol) => {
+        const rect = record?.getBoundingClientRect();
+        if (!rect || !rect.width) return null;
+        const dist =
+          Math.hypot(clientX - (rect.left + rect.width / 2), clientY - (rect.top + rect.height / 2)) /
+          (rect.width / 1000);
+        let hit = null;
+        let best = Infinity;
+        rings.forEach((el, i) => {
+          const d = Math.abs(dist - ringRadii[i]);
+          if (d <= tol && d < best) {
+            best = d;
+            hit = el;
+          }
+        });
+        return hit;
+      };
+
       const hideTip = () => {
         tip?.classList.remove('is-visible');
+        root.classList.remove('is-on-ring');
         for (const el of rings) el.classList.remove('is-hover');
       };
 
-      svg?.addEventListener('pointermove', (e) => {
-        const target = e.target;
-        if (!(target instanceof Element)) return;
-        const ring = target.closest('[data-ring]');
-        if (!ring || !tip) {
-          hideTip();
-          return;
-        }
-
+      const showTip = (ring, e) => {
         const year = ring.getAttribute('data-ring') ?? '';
-        tip.textContent = year;
-        tip.style.left = `${e.clientX + 14}px`;
-        tip.style.top = `${e.clientY}px`;
-        tip.classList.add('is-visible');
-
+        if (tip) {
+          tip.textContent = year;
+          tip.style.left = `${e.clientX + 14}px`;
+          tip.style.top = `${e.clientY}px`;
+          tip.classList.add('is-visible');
+        }
+        root.classList.add('is-on-ring');
         for (const el of rings) {
           el.classList.toggle('is-hover', el.getAttribute('data-ring') === year);
         }
+      };
+
+      root.addEventListener('pointermove', (e) => {
+        const ring = ringUnder(e.clientX, e.clientY, HOVER_TOL);
+        if (ring) showTip(ring, e);
+        else hideTip();
       });
 
-      svg?.addEventListener('pointerleave', hideTip);
+      root.addEventListener('pointerleave', hideTip);
 
-      svg?.addEventListener('click', (e) => {
-        const target = e.target;
-        if (!(target instanceof Element)) return;
-        const ring = target.closest('[data-ring]');
+      root.addEventListener('click', (e) => {
+        // 中心 logo 是返回主页的链接，交给浏览器处理
+        if (e.target instanceof Element && e.target.closest('.tl-label')) return;
+        const ring = ringUnder(e.clientX, e.clientY, CLICK_TOL);
         if (ring) jumpToYear(ring.getAttribute('data-ring') ?? '');
       });
 
@@ -625,3 +667,4 @@ const initialYear = slides[initialIndex].year;
     }
   }
 </script>
+</BaseLayout>
